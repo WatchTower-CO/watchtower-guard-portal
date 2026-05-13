@@ -18,7 +18,7 @@ def check_login():
             password = st.text_input("Password", type="password")
         
         if st.button("Login", type="primary"):
-            if username == "guard" and password == "watchtower2026":   # ← CHANGE THIS PASSWORD
+            if username == "Admin" and password == "JERKvolcom123!@":   # ← CHANGE THIS
                 st.session_state.logged_in = True
                 st.rerun()
             else:
@@ -28,7 +28,11 @@ def check_login():
 check_login()
 
 # ====================== BRANDING ======================
-st.set_page_config(page_title="Watch Tower Guard Portal", page_icon="🛡️", layout="wide")
+st.set_page_config(
+    page_title="Watch Tower Guard Portal",
+    page_icon="🛡️",
+    layout="wide"
+)
 
 st.markdown("""
 <style>
@@ -41,7 +45,7 @@ st.markdown("""
 
 MTZ = ZoneInfo("America/Denver")
 
-# Logo
+# Logo in Sidebar
 try:
     st.sidebar.image("logo.png", width=200)
 except:
@@ -113,11 +117,11 @@ def delete_event(event_id):
 init_db()
 df = get_data()
 
-# Sidebar
+# Sidebar Navigation
 st.sidebar.header("Navigation")
 page = st.sidebar.radio("Go to", ["Log New Event", "Live Reports", "Performance Charts", "Guard Leaderboard", "Export & Backup"])
 
-# Pages
+# ====================== PAGES ======================
 if page == "Log New Event":
     st.header("Log New Guard Response")
     with st.form("log_form"):
@@ -129,7 +133,10 @@ if page == "Log New Event":
         with col2:
             arrival_time_str = st.text_input("Guard Arrival Time (e.g. 12:08 or 12:08 PM)", value="12:05")
             location = st.text_input("Location", value="Auria")
-            event_type = st.selectbox("Event Type", ["Alarm", "False Alarm", "Alarm Testing", "User Error", "Motion", "Door Contact", "Perimeter Breach", "Other"], index=0)
+            event_type = st.selectbox("Event Type", [
+                "Alarm", "False Alarm", "Alarm Testing", "User Error", 
+                "Motion", "Door Contact", "Perimeter Breach", "Other"
+            ], index=0)
             notes = st.text_area("Notes")
         if st.form_submit_button("✅ Log Event"):
             event_dt = parse_time(str(event_date), event_time_str)
@@ -145,7 +152,13 @@ elif page == "Live Reports":
             rt = f"{row['response_time_min']:.1f} min" if pd.notna(row.get('response_time_min')) else "Pending"
             cols = st.columns([7, 1, 1])
             with cols[0]:
-                st.markdown(f'<div class="event-row"><strong>{row["event_timestamp"].strftime("%Y-%m-%d %I:%M %p")}</strong> — <strong>{row["dispatched_guard"]}</strong> @ {row["location"]} | <strong>{rt}</strong> | {row["event_type"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                <div class="event-row">
+                    <strong>{row['event_timestamp'].strftime('%Y-%m-%d %I:%M %p')}</strong> — 
+                    <strong>{row['dispatched_guard']}</strong> @ {row['location']} 
+                    | <strong>{rt}</strong> | {row['event_type']}
+                </div>
+                ''', unsafe_allow_html=True)
             with cols[1]:
                 if st.button("✏️", key=f"e{row['id']}"): st.info("Edit coming soon")
             with cols[2]:
@@ -178,13 +191,20 @@ elif page == "Performance Charts":
     st.subheader("Event Type Breakdown")
     if not df.empty:
         type_counts = df['event_type'].value_counts()
-        color_map = {"Alarm Testing":"#3b82f6", "User Error":"#22c55e", "Motion":"#f59e0b", "Door Contact":"#8b5cf6", "Perimeter Breach":"#ef4444", "Alarm":"#ef4444", "False Alarm":"#64748b", "Other":"#94a3b8"}
+        color_map = {
+            "Alarm Testing": "#3b82f6", "User Error": "#22c55e", "Motion": "#f59e0b",
+            "Door Contact": "#8b5cf6", "Perimeter Breach": "#ef4444",
+            "Alarm": "#ef4444", "False Alarm": "#64748b", "Other": "#94a3b8"
+        }
         c1, c2 = st.columns(2)
         with c1:
-            fig_pie = px.pie(names=type_counts.index, values=type_counts.values, title="Event Types", color_discrete_sequence=[color_map.get(t,"#64748b") for t in type_counts.index])
+            fig_pie = px.pie(names=type_counts.index, values=type_counts.values, 
+                           title="Distribution of Event Types", 
+                           color_discrete_sequence=[color_map.get(t, "#64748b") for t in type_counts.index])
             st.plotly_chart(fig_pie, use_container_width=True)
         with c2:
-            fig_bar = px.bar(x=type_counts.index, y=type_counts.values, title="Count by Type", color=type_counts.index, color_discrete_map=color_map)
+            fig_bar = px.bar(x=type_counts.index, y=type_counts.values, 
+                           title="Count by Event Type", color=type_counts.index, color_discrete_map=color_map)
             st.plotly_chart(fig_bar, use_container_width=True)
         st.caption("**Color Key**: Blue=Alarm Testing • Green=User Error • Orange=Motion • Purple=Door Contact • Red=Perimeter Breach")
 
@@ -192,7 +212,12 @@ elif page == "Guard Leaderboard":
     st.header("🏆 Guard Leaderboard")
     valid_df = df.dropna(subset=['response_time_min']) if not df.empty else pd.DataFrame()
     if not valid_df.empty:
-        lb = valid_df.groupby('dispatched_guard').agg(responses=('id','count'), avg_response=('response_time_min','mean'), best=('response_time_min','min'), worst=('response_time_min','max')).round(1).sort_values('avg_response')
+        lb = valid_df.groupby('dispatched_guard').agg(
+            responses=('id','count'),
+            avg_response=('response_time_min','mean'),
+            best=('response_time_min','min'),
+            worst=('response_time_min','max')
+        ).round(1).sort_values('avg_response')
         st.dataframe(lb, use_container_width=True)
 
 elif page == "Export & Backup":
