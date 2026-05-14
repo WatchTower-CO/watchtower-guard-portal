@@ -27,27 +27,23 @@ def check_login():
 
 check_login()
 
-# ====================== BRANDING - LIGHT THEME ======================
+# ====================== LIGHT THEME BRANDING ======================
 st.set_page_config(page_title="Watch Tower Guard Portal", page_icon="🛡️", layout="wide")
 
 st.markdown("""
 <style>
     .stApp { 
-        background-color: #ffffff; 
-        color: #1e2937; 
-        font-family: 'Helvetica', Arial, sans-serif; 
+        background-color: #ffffff !important; 
+        color: #1e2937 !important; 
     }
     .stButton>button { 
         background-color: #f97316; 
         color: white; 
         border-radius: 6px; 
         font-weight: 600; 
-        padding: 10px 24px;
     }
     h1, h2 { color: #1e2937; font-weight: 700; }
-    .stTextInput > div > div > input, 
-    .stSelectbox > div > div > div, 
-    .stDateInput > div > div > input {
+    .stTextInput input, .stSelectbox, .stDateInput input {
         background-color: #f8fafc !important;
         color: #1e2937 !important;
         border: 1px solid #cbd5e1;
@@ -64,14 +60,13 @@ st.markdown("""
 
 MTZ = ZoneInfo("America/Denver")
 
-# Sidebar
 try:
     st.sidebar.image("logo.png", width=200)
 except:
     try:
         st.sidebar.image("logo.jpg", width=200)
     except:
-        st.sidebar.markdown("**🛡️ WATCH TOWER**")
+        st.sidebar.write("**🛡️ WATCH TOWER**")
 
 st.sidebar.header("Navigation")
 page = st.sidebar.radio("Go to", ["Log New Event", "Live Reports", "Performance Charts", "Guard Leaderboard", "Export & Backup"])
@@ -151,18 +146,14 @@ if page == "Log New Event":
         with col2:
             arrival_time_str = st.text_input("Guard Arrival Time (e.g. 12:08 or 12:08 PM)", value="12:05")
             location = st.text_input("Location", value="Auria")
-            event_type = st.selectbox("Event Type", [
-                "Alarm", "False Alarm", "Alarm Testing", "User Error", 
-                "Motion", "Door Contact", "Perimeter Breach", "Other"
-            ], index=0)
+            event_type = st.selectbox("Event Type", ["Alarm", "False Alarm", "Alarm Testing", "User Error", "Motion", "Door Contact", "Perimeter Breach", "Other"], index=0)
             notes = st.text_area("Notes")
-        submitted = st.form_submit_button("✅ Log Event")
-        if submitted:
+        if st.form_submit_button("✅ Log Event"):
             event_dt = parse_time(str(event_date), event_time_str)
             arrival_dt = parse_time(str(event_date), arrival_time_str)
             if event_dt and arrival_dt and log_event(event_dt, guard, arrival_dt, location, event_type, notes):
                 st.success("✅ Event logged successfully!")
-                st.balloons()  # Nice visual confirmation
+                st.balloons()
                 st.rerun()
 
 elif page == "Live Reports":
@@ -172,19 +163,13 @@ elif page == "Live Reports":
             rt = f"{row['response_time_min']:.1f} min" if pd.notna(row.get('response_time_min')) else "Pending"
             cols = st.columns([7, 1, 1])
             with cols[0]:
-                st.markdown(f'''
-                <div class="event-row">
-                    <strong>{row['event_timestamp'].strftime('%Y-%m-%d %I:%M %p')}</strong> — 
-                    <strong>{row['dispatched_guard']}</strong> @ {row['location']} 
-                    | <strong>{rt}</strong> | {row['event_type']}
-                </div>
-                ''', unsafe_allow_html=True)
+                st.markdown(f'<div class="event-row"><strong>{row["event_timestamp"].strftime("%Y-%m-%d %I:%M %p")}</strong> — <strong>{row["dispatched_guard"]}</strong> @ {row["location"]} | <strong>{rt}</strong> | {row["event_type"]}</div>', unsafe_allow_html=True)
             with cols[1]:
                 if st.button("✏️", key=f"e{row['id']}"): st.info("Edit coming soon")
             with cols[2]:
                 if st.button("🗑️", key=f"d{row['id']}"):
                     delete_event(row['id'])
-                    st.success("Event deleted!")
+                    st.success("Deleted!")
                     st.rerun()
     else:
         st.info("No events logged yet.")
@@ -192,7 +177,6 @@ elif page == "Live Reports":
     st.subheader("Full Table")
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-# Performance Charts (kept simple for now)
 elif page == "Performance Charts":
     st.header("📊 Guard Response Performance")
     valid_df = df.dropna(subset=['response_time_min']) if not df.empty else pd.DataFrame()
@@ -208,13 +192,5 @@ elif page == "Performance Charts":
         fig = px.line(valid_df.sort_values('event_timestamp'), x='event_timestamp', y='response_time_min', markers=True)
         fig.add_hline(y=8, line_dash="dash", line_color="#f97316", annotation_text="8 min Target")
         st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("Event Type Breakdown")
-    if not df.empty:
-        type_counts = df['event_type'].value_counts()
-        c1, c2 = st.columns(2)
-        with c1:
-            fig_pie = px.pie(names=type_counts.index, values=type_counts.values, title="Event Types")
-            st.plotly_chart(fig_pie, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
