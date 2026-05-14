@@ -16,7 +16,6 @@ def check_login():
         with col1:
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
-        
         if st.button("Login", type="primary"):
             if username == "Admin" and password == "WATCHtower123!@":
                 st.session_state.logged_in = True
@@ -27,7 +26,7 @@ def check_login():
 
 check_login()
 
-# ====================== LIGHT THEME + ORANGE ACCENT ======================
+# ====================== LIGHT THEME + ORANGE SIDEBAR ======================
 st.set_page_config(page_title="Watch Tower Guard Portal", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -36,60 +35,110 @@ st.markdown("""
         background-color: #ffffff !important; 
         color: #1e2937 !important; 
     }
-    h1, h2, h3, label, .stMarkdown p { 
+    h1, h2, h3, label, p { 
         color: #1e2937 !important; 
         font-weight: 700; 
     }
     .stButton>button { 
         background-color: #db7f36; 
-        color: white; 
-        border-radius: 6px; 
-        font-weight: 600; 
+        color: white !important; 
     }
     .stTextInput input, .stSelectbox, .stDateInput input, .stTextArea textarea {
         background-color: #f8fafc !important;
         color: #1e2937 !important;
         border: 1px solid #cbd5e1;
     }
-    .sidebar .css-1d391kg, .stSidebar {
+    /* Sidebar */
+    .stSidebar, .stSidebar .css-1d391kg, section[data-testid="stSidebar"] {
         background-color: #1e2937 !important;
     }
-    .stSidebar .stRadio label {
-        color: #db7f36 !important;
-        font-weight: 600;
+    .stSidebar label, .stSidebar .stRadio label {
+        color: #ffffff !important;
     }
-    .event-row { 
-        background-color: #f8fafc; 
-        padding: 16px; 
-        border-radius: 8px; 
-        margin-bottom: 12px; 
-        border: 1px solid #e2e8f0;
+    .stSidebar h2, .stSidebar .stMarkdown {
+        color: #db7f36 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 MTZ = ZoneInfo("America/Denver")
 
-# Sidebar Logo + Navigation
-try:
-    st.sidebar.image("logo.png", width=200)
-except:
+# Logo + Title
+col_logo, col_title = st.columns([1, 4])
+with col_logo:
     try:
-        st.sidebar.image("logo.jpg", width=200)
+        st.image("logo.png", width=140)
     except:
-        st.sidebar.write("**🛡️ WATCH TOWER**")
+        try:
+            st.image("logo.jpg", width=140)
+        except:
+            st.write("🛡️")
 
+with col_title:
+    st.title("GUARD RESPONSE PORTAL")
+
+st.caption("Internal • Real-Time Response Tracking • WeAreWatchTower.com")
+
+# Sidebar Navigation
 st.sidebar.header("Navigation")
 page = st.sidebar.radio("Go to", ["Log New Event", "Live Reports", "Performance Charts", "Guard Leaderboard", "Export & Backup"])
 
-st.title("GUARD RESPONSE PORTAL")
-st.caption("Internal • Real-Time Response Tracking • WeAreWatchTower.com")
-
 # ====================== DATABASE ======================
-# (Database code remains the same - keeping it short here)
 DB_NAME = "watchtower_guard_log.db"
 
-# ... (init_db, parse_time, log_event, get_data, delete_event functions stay the same)
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.execute('''CREATE TABLE IF NOT EXISTS guard_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_timestamp DATETIME NOT NULL,
+        dispatched_guard TEXT,
+        guard_arrival_timestamp DATETIME NOT NULL,
+        location TEXT DEFAULT "Auria",
+        event_type TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+    conn.close()
+
+def parse_time(date_str, time_str):
+    if not time_str or not time_str.strip(): return None
+    try:
+        return datetime.strptime(f"{date_str} {time_str.strip()}", "%Y-%m-%d %H:%M").replace(tzinfo=MTZ)
+    except:
+        try:
+            return datetime.strptime(f"{date_str} {time_str.strip()}", "%Y-%m-%d %I:%M %p").replace(tzinfo=MTZ)
+        except:
+            return None
+
+def log_event(event_dt, guard, arrival_dt, location, event_type, notes):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        conn.execute('''INSERT INTO guard_events 
+            (event_timestamp, dispatched_guard, guard_arrival_timestamp, location, event_type, notes)
+            VALUES (?, ?, ?, ?, ?, ?)''', 
+            (event_dt.replace(tzinfo=None), guard, arrival_dt.replace(tzinfo=None) if arrival_dt else None, location, event_type, notes))
+        conn.commit()
+        conn.close()
+        return True
+    except:
+        return False
+
+def get_data():
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY event_timestamp DESC", conn)
+    conn.close()
+    if not df.empty:
+        df['event_timestamp'] = pd.to_datetime(df['event_timestamp']).dt.tz_localize('UTC').dt.tz_convert(MTZ)
+        df['guard_arrival_timestamp'] = pd.to_datetime(df['guard_arrival_timestamp']).dt.tz_localize('UTC').dt.tz_convert(MTZ)
+        df['response_time_min'] = (df['guard_arrival_timestamp'] - df['event_timestamp']).dt.total_seconds() / 60
+        df['response_time_min'] = df['response_time_min'].abs()
+    return df
+
+def delete_event(event_id):
+    conn = sqlite3.connect(DB_NAME)
+    conn.execute("DELETE FROM guard_events WHERE id = ?", (event_id,))
+    conn.commit()
+    conn.close()
 
 init_db()
 df = get_data()
@@ -97,7 +146,7 @@ df = get_data()
 # ====================== PAGES ======================
 if page == "Log New Event":
     st.header("Log New Guard Response")
-    with st.form("log_form_unique"):
+    with st.form("log_form_unique_key"):
         col1, col2 = st.columns(2)
         with col1:
             event_date = st.date_input("Event Date", value=datetime.now(MTZ).date())
@@ -106,7 +155,10 @@ if page == "Log New Event":
         with col2:
             arrival_time_str = st.text_input("Guard Arrival Time (e.g. 12:08 or 12:08 PM)", value="12:05")
             location = st.text_input("Location", value="Auria")
-            event_type = st.selectbox("Event Type", ["Alarm", "False Alarm", "Alarm Testing", "User Error", "Motion", "Door Contact", "Perimeter Breach", "Other"], index=0)
+            event_type = st.selectbox("Event Type", [
+                "Alarm", "False Alarm", "Alarm Testing", "User Error", 
+                "Motion", "Door Contact", "Perimeter Breach", "Other"
+            ], index=0)
             notes = st.text_area("Notes")
         if st.form_submit_button("✅ Log Event"):
             event_dt = parse_time(str(event_date), event_time_str)
@@ -123,7 +175,13 @@ elif page == "Live Reports":
             rt = f"{row['response_time_min']:.1f} min" if pd.notna(row.get('response_time_min')) else "Pending"
             cols = st.columns([7, 1, 1])
             with cols[0]:
-                st.markdown(f'<div class="event-row"><strong>{row["event_timestamp"].strftime("%Y-%m-%d %I:%M %p")}</strong> — <strong>{row["dispatched_guard"]}</strong> @ {row["location"]} | <strong>{rt}</strong> | {row["event_type"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'''
+                <div style="background-color:#f8fafc; padding:16px; border-radius:8px; margin-bottom:12px; border:1px solid #e2e8f0;">
+                    <strong>{row['event_timestamp'].strftime('%Y-%m-%d %I:%M %p')}</strong> — 
+                    <strong>{row['dispatched_guard']}</strong> @ {row['location']} 
+                    | <strong>{rt}</strong> | {row['event_type']}
+                </div>
+                ''', unsafe_allow_html=True)
             with cols[1]:
                 if st.button("✏️", key=f"e{row['id']}"): st.info("Edit coming soon")
             with cols[2]:
@@ -137,6 +195,6 @@ elif page == "Live Reports":
     st.subheader("Full Table")
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-# Performance Charts, Leaderboard, Export pages (same as before)
+# Add other pages (Performance Charts, etc.) if needed
 
 st.caption("WeAreWatchTower.com • Guard Response System")
