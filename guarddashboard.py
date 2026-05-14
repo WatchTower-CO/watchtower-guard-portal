@@ -27,7 +27,7 @@ def check_login():
 
 check_login()
 
-# ====================== BRANDING ======================
+# ====================== BRANDING & STYLING ======================
 st.set_page_config(page_title="Watch Tower Guard Portal", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -42,20 +42,21 @@ st.markdown("""
         color: white; 
         border-radius: 6px; 
         font-weight: 600; 
-        padding: 10px 20px;
+        padding: 10px 24px;
     }
-    h1 { color: #ffffff; font-weight: 700; letter-spacing: -0.5px; }
-    h2, h3 { color: #f1f5f9; }
-    
-    /* Form styling */
+    h1 { 
+        color: #ffffff; 
+        font-weight: 700; 
+        letter-spacing: -0.5px; 
+    }
     .stTextInput > div > div > input, 
     .stSelectbox > div > div > div, 
     .stDateInput > div > div > input {
-        background-color: #1e2937 !important;
+        background-color: #1f2937 !important;
         color: #e2e8f0 !important;
         border-radius: 6px;
+        border: 1px solid #334155;
     }
-    
     .event-row { 
         background-color: #1e2937; 
         padding: 16px; 
@@ -82,11 +83,10 @@ page = st.sidebar.radio("Go to", ["Log New Event", "Live Reports", "Performance 
 st.title("GUARD RESPONSE PORTAL")
 st.caption("Internal • Real-Time Response Tracking • WeAreWatchTower.com")
 
-# ====================== DATABASE & FUNCTIONS ======================
-# (Same as before - keeping all database logic intact)
-
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
+# (Database functions remain the same - keeping them short here for brevity)
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     conn.execute('''CREATE TABLE IF NOT EXISTS guard_events (
@@ -168,6 +168,6 @@ if page == "Log New Event":
                 st.success("✅ Event logged successfully!")
                 st.rerun()
 
-# (Rest of pages remain the same as previous full version - Live Reports, Charts, etc.)
+# Live Reports, Charts, etc. (keeping the rest the same for now)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
