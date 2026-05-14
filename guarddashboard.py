@@ -18,7 +18,7 @@ def check_login():
             password = st.text_input("Password", type="password")
         
         if st.button("Login", type="primary"):
-            if username == "guard" and password == "watchtower2026":
+            if username == "Admin" and password == "JERKvolcom123!@":
                 st.session_state.logged_in = True
                 st.rerun()
             else:
