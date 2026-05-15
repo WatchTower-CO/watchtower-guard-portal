@@ -4,7 +4,7 @@ from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
 
-# Login
+# ====================== LOGIN ======================
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -16,10 +16,13 @@ if not st.session_state.logged_in:
         if username == "Admin" and password == "WATCHtower123!@":
             st.session_state.logged_in = True
             st.rerun()
+        else:
+            st.error("Incorrect credentials")
     st.stop()
 
-# Basic Setup
+# ====================== SETUP ======================
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
+
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
@@ -28,7 +31,7 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# Database
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
@@ -55,8 +58,7 @@ def log_event(event_time, guard, arrival_time, location, event_type, notes):
         conn.commit()
         conn.close()
         return True
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except:
         return False
 
 def get_data():
@@ -68,10 +70,9 @@ def get_data():
 init_db()
 df = get_data()
 
-# Log New Event
+# ====================== PAGES ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
-    
     with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -91,13 +92,11 @@ if page == "Log New Event":
         if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_arrival = f"{event_date} {arrival_time}"
-            
             if log_event(full_event, guard, full_arrival, location, event_type, notes):
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
-                st.rerun()   # This forces refresh
+                st.rerun()
 
-# Live Reports
 elif page == "Live Reports":
     st.header("Recent Events")
     if df.empty:
