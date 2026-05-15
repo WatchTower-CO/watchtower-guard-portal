@@ -20,7 +20,7 @@ if not st.session_state.logged_in:
             st.error("Incorrect credentials")
     st.stop()
 
-# ====================== BASIC SETUP ======================
+# ====================== SETUP ======================
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
 
 MTZ = ZoneInfo("America/Denver")
@@ -28,7 +28,6 @@ MTZ = ZoneInfo("America/Denver")
 st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
-# Sidebar
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
@@ -68,7 +67,7 @@ df = get_data()
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
     
-    with st.form("simple_form"):
+    with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
             event_date = st.date_input("Event Date", datetime.now(MTZ).date())
@@ -77,14 +76,19 @@ if page == "Log New Event":
         with col2:
             arrival_time = st.text_input("Guard Arrival Time (e.g. 12:05)", "12:05")
             location = st.text_input("Location", "Auria")
-            event_type = st.selectbox("Event Type", ["Alarm", "False Alarm", "Alarm Testing", "User Error", "Other"])
+            event_type = st.selectbox("Event Type", [
+                "Alarm", "False Alarm", "Alarm Testing", "User Error",
+                "Power Outage", "Signal Lost", "Motion", "Door Contact", 
+                "Perimeter Breach", "Other"
+            ], index=0)
             notes = st.text_area("Notes")
         
-        if st.form_submit_button("Log Event"):
+        if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_arrival = f"{event_date} {arrival_time}"
             if log_event(full_event, guard, full_arrival, location, event_type, notes):
-                st.success("✅ Event Logged Successfully!")
+                st.success("**✅ Event Captured Successfully!**")
+                st.balloons()
                 st.rerun()
 
 # ====================== LIVE REPORTS ======================
