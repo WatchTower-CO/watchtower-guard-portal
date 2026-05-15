@@ -4,7 +4,9 @@ from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
 
-# ====================== LOGIN ======================
+st.set_page_config(page_title="Guard Response Portal", layout="wide")
+
+# Login
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -20,24 +22,22 @@ if not st.session_state.logged_in:
             st.error("Incorrect credentials")
     st.stop()
 
-# ====================== SETUP ======================
-st.set_page_config(page_title="Guard Response Portal", layout="wide")
+# Setup
 MTZ = ZoneInfo("America/Denver")
-
 st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# ====================== DATABASE ======================
+# Database
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     conn.execute("DROP TABLE IF EXISTS guard_events")
     conn.execute('''CREATE TABLE guard_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
         dispatched_guard TEXT,
         guard_arrival_timestamp TEXT,
@@ -58,7 +58,7 @@ def log_event(event_time, guard, arrival_time, location, event_type, notes):
         conn.close()
         return True
     except Exception as e:
-        st.error(f"Database error: {str(e)}")
+        st.error(f"Save failed: {e}")
         return False
 
 def get_data():
@@ -70,10 +70,9 @@ def get_data():
 init_db()
 df = get_data()
 
-# ====================== LOG NEW EVENT ======================
+# Log New Event
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
-    
     with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -98,7 +97,7 @@ if page == "Log New Event":
                 st.balloons()
                 st.rerun()
 
-# ====================== LIVE REPORTS ======================
+# Live Reports
 elif page == "Live Reports":
     st.header("Recent Events")
     if df.empty:
