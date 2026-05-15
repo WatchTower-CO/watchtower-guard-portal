@@ -31,12 +31,14 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# ====================== DATABASE ======================
+# ====================== DATABASE - FIXED ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
-    conn.execute('''CREATE TABLE IF NOT EXISTS guard_events (
+    # Drop old table to fix column mismatch
+    conn.execute("DROP TABLE IF EXISTS guard_events")
+    conn.execute('''CREATE TABLE guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
         dispatched_guard TEXT,
@@ -49,7 +51,9 @@ def init_db():
 
 def log_event(event_time, guard, arrival_time, location, event_type, notes):
     conn = sqlite3.connect(DB_NAME)
-    conn.execute("INSERT INTO guard_events VALUES (NULL, ?, ?, ?, ?, ?, ?)",
+    conn.execute("""INSERT INTO guard_events 
+                    (event_timestamp, dispatched_guard, guard_arrival_timestamp, location, event_type, notes)
+                    VALUES (?, ?, ?, ?, ?, ?)""",
                  (event_time, guard, arrival_time, location, event_type, notes))
     conn.commit()
     conn.close()
@@ -60,7 +64,7 @@ def get_data():
     conn.close()
     return df
 
-init_db()
+init_db()   # This will reset the table cleanly
 df = get_data()
 
 # ====================== LOG NEW EVENT ======================
