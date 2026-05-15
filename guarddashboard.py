@@ -4,9 +4,7 @@ from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
 
-st.set_page_config(page_title="Guard Response Portal", layout="wide")
-
-# ====================== LOGIN ======================
+# Login
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -18,11 +16,10 @@ if not st.session_state.logged_in:
         if username == "Admin" and password == "WATCHtower123!@":
             st.session_state.logged_in = True
             st.rerun()
-        else:
-            st.error("Incorrect credentials")
     st.stop()
 
-# ====================== SETUP ======================
+# Basic Setup
+st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
@@ -31,12 +28,12 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# ====================== DATABASE ======================
+# Database
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
-    conn.execute("DROP TABLE IF EXISTS guard_events")  # Reset to fix column issues
+    conn.execute("DROP TABLE IF EXISTS guard_events")
     conn.execute('''CREATE TABLE guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
@@ -53,13 +50,13 @@ def log_event(event_time, guard, arrival_time, location, event_type, notes):
         conn = sqlite3.connect(DB_NAME)
         conn.execute("""INSERT INTO guard_events 
                         (event_timestamp, dispatched_guard, guard_arrival_timestamp, location, event_type, notes)
-                        VALUES (?, ?, ?, ?, ?, ?)""",
+                        VALUES (?, ?, ?, ?, ?, ?)""", 
                      (event_time, guard, arrival_time, location, event_type, notes))
         conn.commit()
         conn.close()
         return True
     except Exception as e:
-        st.error(f"Save error: {e}")
+        st.error(f"Error: {e}")
         return False
 
 def get_data():
@@ -71,7 +68,7 @@ def get_data():
 init_db()
 df = get_data()
 
-# ====================== LOG NEW EVENT ======================
+# Log New Event
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
     
@@ -79,10 +76,10 @@ if page == "Log New Event":
         col1, col2 = st.columns(2)
         with col1:
             event_date = st.date_input("Event Date", datetime.now(MTZ).date())
-            event_time = st.text_input("Event Time (e.g. 12:00)", "12:00")
+            event_time = st.text_input("Event Time", "12:00")
             guard = st.text_input("Dispatched Guard", "Teddy")
         with col2:
-            arrival_time = st.text_input("Guard Arrival Time (e.g. 12:05)", "12:05")
+            arrival_time = st.text_input("Guard Arrival Time", "12:05")
             location = st.text_input("Location", "Auria")
             event_type = st.selectbox("Event Type", [
                 "Alarm", "False Alarm", "Alarm Testing", "User Error",
@@ -91,16 +88,16 @@ if page == "Log New Event":
             ])
             notes = st.text_area("Notes")
         
-        submitted = st.form_submit_button("✅ Log Event")
-        if submitted:
+        if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_arrival = f"{event_date} {arrival_time}"
+            
             if log_event(full_event, guard, full_arrival, location, event_type, notes):
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
-                st.rerun()
+                st.rerun()   # This forces refresh
 
-# ====================== LIVE REPORTS ======================
+# Live Reports
 elif page == "Live Reports":
     st.header("Recent Events")
     if df.empty:
