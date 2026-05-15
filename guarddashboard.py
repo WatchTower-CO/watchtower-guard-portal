@@ -4,6 +4,8 @@ from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
 
+st.set_page_config(page_title="Guard Response Portal", layout="wide")
+
 # ====================== LOGIN ======================
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -21,8 +23,6 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ====================== SETUP ======================
-st.set_page_config(page_title="Guard Response Portal", layout="wide")
-
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
@@ -31,13 +31,12 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# ====================== DATABASE - FIXED ======================
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
-    # Drop old table to fix column mismatch
-    conn.execute("DROP TABLE IF EXISTS guard_events")
+    conn.execute("DROP TABLE IF EXISTS guard_events")  # Reset to fix column issues
     conn.execute('''CREATE TABLE guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
@@ -50,21 +49,26 @@ def init_db():
     conn.close()
 
 def log_event(event_time, guard, arrival_time, location, event_type, notes):
-    conn = sqlite3.connect(DB_NAME)
-    conn.execute("""INSERT INTO guard_events 
-                    (event_timestamp, dispatched_guard, guard_arrival_timestamp, location, event_type, notes)
-                    VALUES (?, ?, ?, ?, ?, ?)""",
-                 (event_time, guard, arrival_time, location, event_type, notes))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        conn.execute("""INSERT INTO guard_events 
+                        (event_timestamp, dispatched_guard, guard_arrival_timestamp, location, event_type, notes)
+                        VALUES (?, ?, ?, ?, ?, ?)""",
+                     (event_time, guard, arrival_time, location, event_type, notes))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Save error: {e}")
+        return False
 
 def get_data():
     conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY event_timestamp DESC", conn)
+    df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY id DESC", conn)
     conn.close()
     return df
 
-init_db()   # This will reset the table cleanly
+init_db()
 df = get_data()
 
 # ====================== LOG NEW EVENT ======================
@@ -84,14 +88,15 @@ if page == "Log New Event":
                 "Alarm", "False Alarm", "Alarm Testing", "User Error",
                 "Power Outage", "Signal Lost", "Motion", "Door Contact", 
                 "Perimeter Breach", "Other"
-            ], index=0)
+            ])
             notes = st.text_area("Notes")
         
-        if st.form_submit_button("✅ Log Event"):
+        submitted = st.form_submit_button("✅ Log Event")
+        if submitted:
             full_event = f"{event_date} {event_time}"
             full_arrival = f"{event_date} {arrival_time}"
             if log_event(full_event, guard, full_arrival, location, event_type, notes):
-                st.success("**✅ Event Captured Successfully!**")
+                st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
                 st.rerun()
 
