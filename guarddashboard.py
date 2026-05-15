@@ -22,7 +22,6 @@ if not st.session_state.logged_in:
 
 # ====================== SETUP ======================
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
-
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
@@ -38,7 +37,7 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     conn.execute("DROP TABLE IF EXISTS guard_events")
     conn.execute('''CREATE TABLE guard_events (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         event_timestamp TEXT,
         dispatched_guard TEXT,
         guard_arrival_timestamp TEXT,
@@ -58,7 +57,8 @@ def log_event(event_time, guard, arrival_time, location, event_type, notes):
         conn.commit()
         conn.close()
         return True
-    except:
+    except Exception as e:
+        st.error(f"Database error: {str(e)}")
         return False
 
 def get_data():
@@ -70,9 +70,10 @@ def get_data():
 init_db()
 df = get_data()
 
-# ====================== PAGES ======================
+# ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
+    
     with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -97,6 +98,7 @@ if page == "Log New Event":
                 st.balloons()
                 st.rerun()
 
+# ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
     st.header("Recent Events")
     if df.empty:
