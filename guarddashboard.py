@@ -30,12 +30,12 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# ====================== DATABASE (Clean Reset) ======================
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
-    conn.execute("DROP TABLE IF EXISTS guard_events")  # Force clean table
+    conn.execute("DROP TABLE IF EXISTS guard_events")
     conn.execute('''CREATE TABLE guard_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         event_timestamp TEXT,
@@ -67,13 +67,12 @@ def get_data():
     conn.close()
     return df
 
-init_db()   # Reset database
+init_db()
 df = get_data()
 
 # ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
-    
     with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
