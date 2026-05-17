@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import sqlite3
 from zoneinfo import ZoneInfo
+import os
+
+st.set_page_config(page_title="Guard Response Portal", layout="wide")
 
 # ====================== LOGIN ======================
 if 'logged_in' not in st.session_state:
@@ -21,8 +23,8 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ====================== SETUP ======================
-st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
+CSV_FILE = "guard_events.csv"
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
@@ -30,49 +32,17 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# ====================== DATABASE ======================
-DB_NAME = "watchtower_guard_log.db"
-
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.execute("DROP TABLE IF EXISTS guard_events")
-    conn.execute('''CREATE TABLE guard_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_timestamp TEXT,
-        dispatched_guard TEXT,
-        guard_arrival_timestamp TEXT,
-        location TEXT,
-        event_type TEXT,
-        notes TEXT
-    )''')
-    conn.close()
-
-def log_event(event_time, guard, arrival_time, location, event_type, notes):
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        conn.execute("""INSERT INTO guard_events 
-                        (event_timestamp, dispatched_guard, guard_arrival_timestamp, location, event_type, notes)
-                        VALUES (?, ?, ?, ?, ?, ?)""", 
-                     (event_time, guard, arrival_time, location, event_type, notes))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        st.error(f"Save error: {e}")
-        return False
-
-def get_data():
-    conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY id DESC", conn)
-    conn.close()
-    return df
-
-init_db()
-df = get_data()
+# Load or create data
+if os.path.exists(CSV_FILE):
+    df = pd.read_csv(CSV_FILE)
+else:
+    df = pd.DataFrame(columns=["event_timestamp", "dispatched_guard", "guard_arrival_timestamp", 
+                               "location", "event_type", "notes"])
 
 # ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
+    
     with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -92,10 +62,23 @@ if page == "Log New Event":
         if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_arrival = f"{event_date} {arrival_time}"
-            if log_event(full_event, guard, full_arrival, location, event_type, notes):
-                st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
-                st.balloons()
-                st.rerun()
+            
+            new_row = pd.DataFrame([{
+                "event_timestamp": full_event,
+                "dispatched_guard": guard,
+                "guard_arrival_timestamp": full_arrival,
+                "location": location,
+                "event_type": event_type,
+                "notes": notes
+            }])
+            
+            global df
+            df = pd.concat([df, new_row], ignore_index=True)
+            df.to_csv(CSV_FILE, index=False)
+            
+            st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
+            st.balloons()
+            st.rerun()
 
 # ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
