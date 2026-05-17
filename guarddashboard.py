@@ -1,13 +1,14 @@
 import streamlit as st
 
-st.set_page_config(page_title="Test", layout="wide")
+st.set_page_config(page_title="Guard Response Portal", layout="wide")
 
-st.title("🛡️ GUARD RESPONSE PORTAL - TEST VERSION")
-st.write("If you can see this text, the app is working.")
+st.title("🛡️ GUARD RESPONSE PORTAL")
+st.header("Test Version")
 
-st.header("Quick Test")
-if st.button("Click Me"):
+st.write("If you can see this, the app is working.")
+
+if st.button("Test Button"):
     st.success("✅ Button works!")
     st.balloons()
 
-st.caption("WeAreWatchTower.com • Test")
+st.caption("WeAreWatchTower.com")
