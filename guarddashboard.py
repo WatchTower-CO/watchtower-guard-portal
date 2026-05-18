@@ -83,8 +83,13 @@ if page == "Log New Event":
             connection_time = st.text_input("Watch Tower Connection Established", "12:05")
             location = st.text_input("Location", "Auria")
             event_type = st.selectbox("Event Type", [
-                "Alarm Testing", "Power Outage", "Signal Lost", 
-                "Test Signal Not Received", "Motion Alarm", "Perimeter Alarm"
+                "Alarm Testing", 
+                "Power Outage", 
+                "Signal Lost", 
+                "Test Signal Not Received", 
+                "Motion Alarm", 
+                "Perimeter Alarm", 
+                "Door Contact"
             ])
             notes = st.text_area("Notes")
         
@@ -123,26 +128,18 @@ elif page == "Performance Charts":
             "Signal Lost": "#fbbf24",
             "Test Signal Not Received": "#a855f7",
             "Motion Alarm": "#f472b6",
-            "Perimeter Alarm": "#3b82f6"
+            "Perimeter Alarm": "#3b82f6",
+            "Door Contact": "#60a5fa"
         }
         
-        fig_bar = px.bar(
+        fig = px.bar(
             x=counts.index, 
             y=counts.values,
             color=counts.index,
             color_discrete_map=color_map,
             labels={'x': 'Event Type', 'y': 'Count'}
         )
-        fig_bar.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events")
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-        # Pie Chart with same colors
-        fig_pie = px.pie(
-            names=counts.index, 
-            values=counts.values,
-            color=counts.index,
-            color_discrete_map=color_map
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        fig.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events")
+        st.plotly_chart(fig, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
