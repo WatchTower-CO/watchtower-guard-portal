@@ -112,34 +112,10 @@ elif page == "Live Reports":
 # ====================== PERFORMANCE CHARTS ======================
 elif page == "Performance Charts":
     st.header("📊 Performance Overview")
-    
     if not df.empty:
         counts = df['event_type'].value_counts()
-        
         st.subheader("Event Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
-        
-        st.subheader("Events by Type")
-        
-        color_map = {
-            "Alarm Testing": "#9ca3af",
-            "Power Outage": "#ef4444",
-            "Signal Lost": "#fbbf24",
-            "Test Signal Not Received": "#a855f7",
-            "Motion Alarm": "#f472b6",
-            "Perimeter Alarm": "#3b82f6",
-            "Door Contact": "#60a5fa"
-        }
-        
-        fig = px.bar(
-            x=counts.index, 
-            y=counts.values,
-            color=counts.index,
-            color_discrete_map=color_map,
-            labels={'x': 'Event Type', 'y': 'Count'}
-        )
-        fig.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events")
-        st.plotly_chart(fig, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
