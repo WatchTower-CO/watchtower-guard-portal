@@ -31,7 +31,7 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
-# ====================== DATABASE ======================
+# ====================== DATABASE - CLEAN RESET ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
@@ -59,7 +59,7 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
         conn.close()
         return True
     except Exception as e:
-        st.error(f"Save error: {e}")
+        st.error(f"❌ Save failed: {str(e)}")
         return False
 
 def get_data():
@@ -93,7 +93,8 @@ if page == "Log New Event":
         if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_connection = f"{event_date} {connection_time}"
-            if log_event(full_event, remote_monitor, full_connection, location, event_type, notes):
+            success = log_event(full_event, remote_monitor, full_connection, location, event_type, notes)
+            if success:
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
                 st.rerun()
