@@ -131,4 +131,4 @@ elif page == "Performance Charts":
         fig = px.bar(x=counts.index, y=counts.values, color=counts.index, color_discrete_map=color_map)
         st.plotly_chart(fig, use_container_width=True)
 
-st.caption("WeAreWatchTower.com • Guard Response System")
+
