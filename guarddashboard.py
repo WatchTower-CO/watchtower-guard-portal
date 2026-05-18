@@ -31,7 +31,7 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
-# ====================== DATABASE - CLEAN RESET ======================
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
@@ -59,7 +59,7 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
         conn.close()
         return True
     except Exception as e:
-        st.error(f"❌ Save failed: {str(e)}")
+        st.error(f"❌ Database Error: {str(e)}")
         return False
 
 def get_data():
@@ -98,6 +98,8 @@ if page == "Log New Event":
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
                 st.rerun()
+            else:
+                st.error("Failed to save event - check error above")
 
 # ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
@@ -115,9 +117,5 @@ elif page == "Performance Charts":
         st.subheader("Event Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
-        
-        st.subheader("Events by Type")
-        fig = px.bar(x=counts.index, y=counts.values, labels={'x': 'Event Type', 'y': 'Count'})
-        st.plotly_chart(fig, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
