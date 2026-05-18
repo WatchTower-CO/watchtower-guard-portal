@@ -3,25 +3,7 @@ import pandas as pd
 from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
-import plotly.express as px
 
-# ====================== LOGIN ======================
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.title("Watch Tower Guard Portal Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username == "Admin" and password == "WATCHtower123!@":
-            st.session_state.logged_in = True
-            st.rerun()
-        else:
-            st.error("Incorrect credentials")
-    st.stop()
-
-# ====================== SETUP ======================
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
@@ -29,7 +11,7 @@ st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
-page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
+page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
 # ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
@@ -47,6 +29,7 @@ def init_db():
         notes TEXT
     )''')
     conn.close()
+    st.info("Database reset successfully")
 
 def log_event(event_time, remote_monitor, connection_time, location, event_type, notes):
     try:
@@ -57,6 +40,7 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
                      (event_time, remote_monitor, connection_time, location, event_type, notes))
         conn.commit()
         conn.close()
+        st.success("✅ Data inserted into database!")
         return True
     except Exception as e:
         st.error(f"❌ Database Error: {str(e)}")
@@ -93,29 +77,19 @@ if page == "Log New Event":
         if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_connection = f"{event_date} {connection_time}"
-            success = log_event(full_event, remote_monitor, full_connection, location, event_type, notes)
-            if success:
-                st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
+            st.write("Attempting to save...")   # Debug message
+            if log_event(full_event, remote_monitor, full_connection, location, event_type, notes):
+                st.success("**EVENT SAVED SUCCESSFULLY!**")
                 st.balloons()
                 st.rerun()
-            else:
-                st.error("Failed to save event - check error above")
 
 # ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
     st.header("Recent Events")
+    df = get_data()
     if df.empty:
         st.info("No events logged yet.")
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
-
-# ====================== PERFORMANCE CHARTS ======================
-elif page == "Performance Charts":
-    st.header("📊 Performance Overview")
-    if not df.empty:
-        counts = df['event_type'].value_counts()
-        st.subheader("Event Summary")
-        for etype, count in counts.items():
-            st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
 
 st.caption("WeAreWatchTower.com • Guard Response System")
