@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
-import plotly.express as px
 
 # ====================== LOGIN ======================
 if 'logged_in' not in st.session_state:
@@ -29,7 +28,7 @@ st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
-page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
+page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
 # ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
@@ -37,7 +36,7 @@ DB_NAME = "watchtower_guard_log.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     conn.execute("DROP TABLE IF EXISTS guard_events")
-    conn.execute('''CREATE TABLE guard_events (
+    conn.execute('''CREATE TABLE IF NOT EXISTS guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
         remote_monitoring TEXT,
@@ -59,7 +58,7 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
         conn.close()
         return True
     except Exception as e:
-        st.error(f"Save failed: {e}")
+        st.error(f"Save error: {str(e)}")
         return False
 
 def get_data():
