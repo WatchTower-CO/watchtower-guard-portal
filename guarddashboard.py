@@ -40,7 +40,7 @@ def init_db():
     conn.execute('''CREATE TABLE guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
-        dispatched_guard TEXT,
+        remote_monitoring TEXT,
         connection_established TEXT,
         location TEXT,
         event_type TEXT,
@@ -48,13 +48,13 @@ def init_db():
     )''')
     conn.close()
 
-def log_event(event_time, guard, connection_time, location, event_type, notes):
+def log_event(event_time, remote_monitor, connection_time, location, event_type, notes):
     try:
         conn = sqlite3.connect(DB_NAME)
         conn.execute("""INSERT INTO guard_events 
-                        (event_timestamp, dispatched_guard, connection_established, location, event_type, notes)
+                        (event_timestamp, remote_monitoring, connection_established, location, event_type, notes)
                         VALUES (?, ?, ?, ?, ?, ?)""", 
-                     (event_time, guard, connection_time, location, event_type, notes))
+                     (event_time, remote_monitor, connection_time, location, event_type, notes))
         conn.commit()
         conn.close()
         return True
@@ -109,7 +109,7 @@ elif page == "Live Reports":
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-# Performance Charts (kept simple for now)
+# ====================== PERFORMANCE CHARTS ======================
 elif page == "Performance Charts":
     st.header("📊 Performance Overview")
     if not df.empty:
@@ -117,5 +117,18 @@ elif page == "Performance Charts":
         st.subheader("Event Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
+
+        st.subheader("Events by Type")
+        color_map = {
+            "Alarm Testing": "#9ca3af",
+            "Power Outage": "#ef4444",
+            "Signal Lost": "#fbbf24",
+            "Test Signal Not Received": "#a855f7",
+            "Motion Alarm": "#f472b6",
+            "Perimeter Alarm": "#3b82f6",
+            "Door Contact": "#60a5fa"
+        }
+        fig = px.bar(x=counts.index, y=counts.values, color=counts.index, color_discrete_map=color_map)
+        st.plotly_chart(fig, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
