@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
+import plotly.express as px
 
 # ====================== LOGIN ======================
 if 'logged_in' not in st.session_state:
@@ -28,7 +29,7 @@ st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
-page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
+page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
 # ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
@@ -36,7 +37,7 @@ DB_NAME = "watchtower_guard_log.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     conn.execute("DROP TABLE IF EXISTS guard_events")
-    conn.execute('''CREATE TABLE IF NOT EXISTS guard_events (
+    conn.execute('''CREATE TABLE guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
         remote_monitoring TEXT,
@@ -58,7 +59,7 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
         conn.close()
         return True
     except Exception as e:
-        st.error(f"Save error: {str(e)}")
+        st.error(f"Save error: {e}")
         return False
 
 def get_data():
@@ -104,5 +105,18 @@ elif page == "Live Reports":
         st.info("No events logged yet.")
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+# ====================== PERFORMANCE CHARTS ======================
+elif page == "Performance Charts":
+    st.header("📊 Performance Overview")
+    if not df.empty:
+        counts = df['event_type'].value_counts()
+        st.subheader("Event Summary")
+        for etype, count in counts.items():
+            st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
+        
+        st.subheader("Events by Type")
+        fig = px.bar(x=counts.index, y=counts.values, labels={'x': 'Event Type', 'y': 'Count'})
+        st.plotly_chart(fig, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
