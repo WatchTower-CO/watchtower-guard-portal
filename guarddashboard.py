@@ -133,4 +133,11 @@ elif page == "Performance Charts":
         fig = px.bar(
             x=counts.index, 
             y=counts.values,
-            labels={'x': 'Event Type', 'y': '
+            labels={'x': 'Event Type', 'y': 'Count'},
+            color=counts.index,
+            color_discrete_map=color_map
+        )
+        fig.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events")
+        st.plotly_chart(fig, use_container_width=True)
+
+st.caption("WeAreWatchTower.com • Guard Response System")
