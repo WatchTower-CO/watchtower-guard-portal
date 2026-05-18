@@ -73,15 +73,14 @@ df = get_data()
 # ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
-    
     with st.form("log_form"):
         col1, col2 = st.columns(2)
         with col1:
             event_date = st.date_input("Event Date", datetime.now(MTZ).date())
-            event_time = st.text_input("Event Time (e.g. 12:00)", "12:00")
+            event_time = st.text_input("Event Time", "12:00")
             guard = st.text_input("Dispatched Guard", "Teddy")
         with col2:
-            connection_time = st.text_input("Watch Tower Connection Established (e.g. 12:05)", "12:05")
+            connection_time = st.text_input("Watch Tower Connection Established", "12:05")
             location = st.text_input("Location", "Auria")
             event_type = st.selectbox("Event Type", [
                 "Alarm Testing", "Power Outage", "Signal Lost", 
@@ -113,18 +112,17 @@ elif page == "Performance Charts":
     if not df.empty:
         counts = df['event_type'].value_counts()
         
-        # Summary at top
         st.subheader("Event Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
         
-        # Colored Bar Chart
         st.subheader("Events by Type")
+        
         color_map = {
             "Alarm Testing": "#9ca3af",      # Grey
             "Power Outage": "#ef4444",       # Red
             "Signal Lost": "#fbbf24",        # Yellow
-            "Test Signal Not Received": "#a855f7",  # Purple
+            "Test Signal Not Received": "#a855f7", # Purple
             "Motion Alarm": "#f472b6",       # Pink
             "Perimeter Alarm": "#3b82f6",    # Blue
             "Door Contact": "#60a5fa"        # Light Blue
@@ -133,11 +131,11 @@ elif page == "Performance Charts":
         fig = px.bar(
             x=counts.index, 
             y=counts.values,
-            labels={'x': 'Event Type', 'y': 'Count'},
             color=counts.index,
-            color_discrete_map=color_map
+            color_discrete_map=color_map,
+            labels={'x': 'Event Type', 'y': 'Number of Events'}
         )
-        fig.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events")
+        fig.update_layout(xaxis_title="Event Type", yaxis_title="Count")
         st.plotly_chart(fig, use_container_width=True)
 
 st.caption("WeAreWatchTower.com • Guard Response System")
