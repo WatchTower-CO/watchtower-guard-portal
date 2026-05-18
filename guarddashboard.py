@@ -13,7 +13,7 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
 
-# Database
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
@@ -31,7 +31,6 @@ def init_db():
     conn.close()
 
 def log_event(event_time, remote_monitor, connection_time, location, event_type, notes):
-    st.write("--- DEBUG: Trying to save event ---")  # Extra debug
     try:
         conn = sqlite3.connect(DB_NAME)
         conn.execute("""INSERT INTO guard_events 
@@ -40,15 +39,20 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
                      (event_time, remote_monitor, connection_time, location, event_type, notes))
         conn.commit()
         conn.close()
-        st.success("**✅ EVENT SAVED SUCCESSFULLY!**")
         return True
     except Exception as e:
-        st.error(f"❌ Failed to save: {str(e)}")
+        st.error(f"Save error: {e}")
         return False
+
+def get_data():
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY id DESC", conn)
+    conn.close()
+    return df
 
 init_db()
 
-# Log New Event
+# ====================== PAGES ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
     with st.form("log_form"):
@@ -60,20 +64,24 @@ if page == "Log New Event":
         with col2:
             connection_time = st.text_input("Watch Tower Connection Established", "12:05")
             location = st.text_input("Location", "Auria")
-            event_type = st.selectbox("Event Type", ["Alarm Testing", "Power Outage", "Signal Lost", "Test Signal Not Received", "Motion Alarm", "Perimeter Alarm", "Door Contact"])
+            event_type = st.selectbox("Event Type", [
+                "Alarm Testing", "Power Outage", "Signal Lost", 
+                "Test Signal Not Received", "Motion Alarm", 
+                "Perimeter Alarm", "Door Contact"
+            ])
             notes = st.text_area("Notes")
         
         if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_connection = f"{event_date} {connection_time}"
-            log_event(full_event, remote_monitor, full_connection, location, event_type, notes)
+            if log_event(full_event, remote_monitor, full_connection, location, event_type, notes):
+                st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
+                st.balloons()
+                st.rerun()
 
-# Live Reports
 elif page == "Live Reports":
     st.header("Recent Events")
-    conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY id DESC", conn)
-    conn.close()
+    df = get_data()                     # Refresh every time
     if df.empty:
         st.info("No events logged yet.")
     else:
