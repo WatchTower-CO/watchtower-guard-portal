@@ -78,7 +78,7 @@ if page == "Log New Event":
         with col1:
             event_date = st.date_input("Event Date", datetime.now(MTZ).date())
             event_time = st.text_input("Event Time", "12:00")
-            guard = st.text_input("Dispatched Guard", "Teddy")
+            remote_monitor = st.text_input("Watch Tower Remote Monitoring", "Live Stream")
         with col2:
             connection_time = st.text_input("Watch Tower Connection Established", "12:05")
             location = st.text_input("Location", "Auria")
@@ -96,7 +96,7 @@ if page == "Log New Event":
         if st.form_submit_button("✅ Log Event"):
             full_event = f"{event_date} {event_time}"
             full_connection = f"{event_date} {connection_time}"
-            if log_event(full_event, guard, full_connection, location, event_type, notes):
+            if log_event(full_event, remote_monitor, full_connection, location, event_type, notes):
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
                 st.rerun()
@@ -109,7 +109,7 @@ elif page == "Live Reports":
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ====================== PERFORMANCE CHARTS ======================
+# Performance Charts (kept simple for now)
 elif page == "Performance Charts":
     st.header("📊 Performance Overview")
     if not df.empty:
