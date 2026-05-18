@@ -118,19 +118,24 @@ elif page == "Performance Charts":
         
         st.subheader("Events by Type")
         
-        # Fixed color order
-        color_sequence = ["#9ca3af", "#ef4444", "#fbbf24", "#a855f7", "#f472b6", "#3b82f6", "#60a5fa"]
+        color_map = {
+            "Alarm Testing": "#9ca3af",
+            "Power Outage": "#ef4444",
+            "Signal Lost": "#fbbf24",
+            "Test Signal Not Received": "#a855f7",
+            "Motion Alarm": "#f472b6",
+            "Perimeter Alarm": "#3b82f6",
+            "Door Contact": "#60a5fa"
+        }
         
         fig = px.bar(
             x=counts.index, 
             y=counts.values,
-            labels={'x': 'Event Type', 'y': 'Count'},
-            color_discrete_sequence=color_sequence
+            color=counts.index,
+            color_discrete_map=color_map,
+            labels={'x': 'Event Type', 'y': 'Count'}
         )
-        fig.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events", showlegend=True)
+        fig.update_layout(xaxis_title="Event Type", yaxis_title="Number of Events")
         st.plotly_chart(fig, use_container_width=True)
-        
-        # Color Key
-        st.caption("**Color Key**: Grey = Alarm Testing | Red = Power Outage | Yellow = Signal Lost | Purple = Test Signal Not Received | Pink = Motion Alarm | Blue = Perimeter Alarm | Light Blue = Door Contact")
 
 st.caption("WeAreWatchTower.com • Guard Response System")
