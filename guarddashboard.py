@@ -26,6 +26,7 @@ st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
+st.success("✅ UPDATED - May 18 - Changes Applied")   # ← Add this line
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
