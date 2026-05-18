@@ -26,8 +26,6 @@ st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
-st.error("🚨 THIS IS THE NEW VERSION - MAY 18")
-st.success("✅ UPDATED - May 18 - Changes Applied")   # ← Add this line
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
@@ -60,7 +58,8 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
         conn.commit()
         conn.close()
         return True
-    except:
+    except Exception as e:
+        st.error(f"Save failed: {e}")
         return False
 
 def get_data():
@@ -85,13 +84,9 @@ if page == "Log New Event":
             connection_time = st.text_input("Watch Tower Connection Established", "12:05")
             location = st.text_input("Location", "Auria")
             event_type = st.selectbox("Event Type", [
-                "Alarm Testing", 
-                "Power Outage", 
-                "Signal Lost", 
-                "Test Signal Not Received", 
-                "Motion Alarm", 
-                "Perimeter Alarm", 
-                "Door Contact"
+                "Alarm Testing", "Power Outage", "Signal Lost", 
+                "Test Signal Not Received", "Motion Alarm", 
+                "Perimeter Alarm", "Door Contact"
             ])
             notes = st.text_area("Notes")
         
@@ -111,24 +106,4 @@ elif page == "Live Reports":
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ====================== PERFORMANCE CHARTS ======================
-elif page == "Performance Charts":
-    st.header("📊 Performance Overview")
-    if not df.empty:
-        counts = df['event_type'].value_counts()
-        st.subheader("Event Summary")
-        for etype, count in counts.items():
-            st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
-
-        st.subheader("Events by Type")
-        color_map = {
-            "Alarm Testing": "#9ca3af",
-            "Power Outage": "#ef4444",
-            "Signal Lost": "#fbbf24",
-            "Test Signal Not Received": "#a855f7",
-            "Motion Alarm": "#f472b6",
-            "Perimeter Alarm": "#3b82f6",
-            "Door Contact": "#60a5fa"
-        }
-        fig = px.bar(x=counts.index, y=counts.values, color=counts.index, color_discrete_map=color_map)
-        st.plotly_chart(fig, use_container_width=True)
+st.caption("WeAreWatchTower.com • Guard Response System")
