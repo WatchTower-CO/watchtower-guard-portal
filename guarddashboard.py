@@ -3,8 +3,9 @@ import pandas as pd
 from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
+import plotly.express as px
 
-# Login
+# ====================== LOGIN ======================
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -20,7 +21,7 @@ if not st.session_state.logged_in:
             st.error("Incorrect credentials")
     st.stop()
 
-# Setup
+# ====================== SETUP ======================
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
@@ -30,7 +31,7 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
-# Database
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
@@ -69,7 +70,7 @@ def get_data():
 init_db()
 df = get_data()
 
-# Log New Event
+# ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
     
@@ -85,7 +86,7 @@ if page == "Log New Event":
             event_type = st.selectbox("Event Type", [
                 "Alarm Testing", "Power Outage", "Signal Lost", 
                 "Test Signal Not Received", "Motion Alarm", 
-                "Perimeter Alarm", "User Error"
+                "Perimeter Alarm", "Door Contact"
             ])
             notes = st.text_area("Notes")
         
@@ -97,7 +98,7 @@ if page == "Log New Event":
                 st.balloons()
                 st.rerun()
 
-# Live Reports
+# ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
     st.header("Recent Events")
     if df.empty:
@@ -105,23 +106,31 @@ elif page == "Live Reports":
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-# Performance Charts
+# ====================== PERFORMANCE CHARTS ======================
 elif page == "Performance Charts":
     st.header("📊 Performance Overview")
     
     if not df.empty:
-        # Summary Counts
-        st.subheader("Event Summary")
         counts = df['event_type'].value_counts()
+        
+        # Summary at top
+        st.subheader("Event Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
         
         # Colored Bar Chart
         st.subheader("Events by Type")
-        fig = px.bar(counts, x=counts.index, y=counts.values, 
-                     labels={'index': 'Event Type', 'y': 'Count'},
-                     color=counts.index,
-                     color_discrete_sequence=px.colors.qualitative.Set3)
-        st.plotly_chart(fig, use_container_width=True)
-
-st.caption("WeAreWatchTower.com • Guard Response System")
+        color_map = {
+            "Alarm Testing": "#9ca3af",      # Grey
+            "Power Outage": "#ef4444",       # Red
+            "Signal Lost": "#fbbf24",        # Yellow
+            "Test Signal Not Received": "#a855f7",  # Purple
+            "Motion Alarm": "#f472b6",       # Pink
+            "Perimeter Alarm": "#3b82f6",    # Blue
+            "Door Contact": "#60a5fa"        # Light Blue
+        }
+        
+        fig = px.bar(
+            x=counts.index, 
+            y=counts.values,
+            labels={'x': 'Event Type', 'y': '
