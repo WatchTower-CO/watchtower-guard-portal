@@ -26,6 +26,7 @@ st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
 st.title("🛡️ GUARD RESPONSE PORTAL")
+st.error("🚨 THIS IS THE NEW VERSION - MAY 18")
 st.success("✅ UPDATED - May 18 - Changes Applied")   # ← Add this line
 st.caption("WeAreWatchTower.com")
 
@@ -131,5 +132,3 @@ elif page == "Performance Charts":
         }
         fig = px.bar(x=counts.index, y=counts.values, color=counts.index, color_discrete_map=color_map)
         st.plotly_chart(fig, use_container_width=True)
-
-
