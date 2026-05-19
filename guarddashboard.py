@@ -14,13 +14,12 @@ st.caption("WeAreWatchTower.com")
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
-# ====================== DATABASE ======================
+# ====================== DATABASE (Fixed - No more wiping) ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
-    conn.execute("DROP TABLE IF EXISTS guard_events")
-    conn.execute('''CREATE TABLE guard_events (
+    conn.execute('''CREATE TABLE IF NOT EXISTS guard_events (
         id INTEGER PRIMARY KEY,
         event_timestamp TEXT,
         remote_monitoring TEXT,
@@ -96,7 +95,7 @@ elif page == "Performance Charts":
     df = get_data()
     
     if df.empty:
-        st.info("No events yet. Log some events to see charts.")
+        st.info("No events yet. Log some to see charts.")
     else:
         counts = df['event_type'].value_counts()
         
@@ -114,7 +113,7 @@ elif page == "Performance Charts":
                            color_discrete_sequence=px.colors.qualitative.Bold)
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        st.subheader("Summary")
+        st.subheader("Event Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
 
