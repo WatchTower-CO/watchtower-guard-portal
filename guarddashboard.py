@@ -8,13 +8,36 @@ import plotly.express as px
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
+# ====================== LOGIN ======================
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.title("🔐 Watch Tower Guard Portal")
+    st.caption("WeAreWatchTower.com")
+    
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        username = st.text_input("Username", placeholder="Admin")
+        password = st.text_input("Password", type="password", placeholder="Enter password")
+        
+        if st.button("Login", type="primary"):
+            if username == "Admin" and password == "WATCHtower123!@":
+                st.session_state.logged_in = True
+                st.success("Login successful!")
+                st.rerun()
+            else:
+                st.error("Incorrect username or password")
+    st.stop()
+
+# ====================== MAIN APP ======================
 st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
 page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
-# ====================== DATABASE (Fixed - No more wiping) ======================
+# ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
 
 def init_db():
