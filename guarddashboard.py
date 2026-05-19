@@ -7,23 +7,6 @@ from zoneinfo import ZoneInfo
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
 
-# ====================== LOGIN ======================
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.title("Watch Tower Guard Portal Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username == "Admin" and password == "WATCHtower123!@":
-            st.session_state.logged_in = True
-            st.rerun()
-        else:
-            st.error("Incorrect credentials")
-    st.stop()
-
-# ====================== SETUP ======================
 st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
@@ -68,7 +51,6 @@ def get_data():
     return df
 
 init_db()
-df = get_data()
 
 # ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
@@ -100,10 +82,11 @@ if page == "Log New Event":
 # ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
     st.header("Recent Events")
-    df = get_data()
+    df = get_data()   # Force fresh load every time
     if df.empty:
         st.info("No events logged yet.")
     else:
         st.dataframe(df, use_container_width=True, hide_index=True)
+        st.write(f"Total events in database: {len(df)}")  # Debug line
 
 st.caption("WeAreWatchTower.com • Guard Response System")
