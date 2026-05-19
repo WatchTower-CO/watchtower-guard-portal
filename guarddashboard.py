@@ -96,29 +96,26 @@ elif page == "Performance Charts":
     df = get_data()
     
     if df.empty:
-        st.info("No events yet. Log some to see charts.")
+        st.info("No events yet. Log some events to see charts.")
     else:
         counts = df['event_type'].value_counts()
         
         col1, col2 = st.columns(2)
-        
         with col1:
-            st.subheader("Events by Type")
+            st.subheader("Events by Type (Bar)")
             fig_bar = px.bar(
                 x=counts.index, 
                 y=counts.values,
                 labels={'x': 'Event Type', 'y': 'Count'},
-                color=counts.index,
                 color_discrete_sequence=px.colors.qualitative.Bold
             )
             st.plotly_chart(fig_bar, use_container_width=True)
         
         with col2:
-            st.subheader("Distribution")
+            st.subheader("Distribution (Pie)")
             fig_pie = px.pie(
                 names=counts.index, 
                 values=counts.values,
-                color=counts.index,
                 color_discrete_sequence=px.colors.qualitative.Bold
             )
             st.plotly_chart(fig_pie, use_container_width=True)
