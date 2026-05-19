@@ -52,6 +52,10 @@ def get_data():
 
 init_db()
 
+# Force refresh data every time
+if 'df' not in st.session_state:
+    st.session_state.df = get_data()
+
 # ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
@@ -77,16 +81,17 @@ if page == "Log New Event":
             if log_event(full_event, remote_monitor, full_connection, location, event_type, notes):
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
+                st.session_state.df = get_data()   # Force refresh
                 st.rerun()
 
 # ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
     st.header("Recent Events")
-    df = get_data()   # Force fresh load every time
+    df = st.session_state.df
     if df.empty:
         st.info("No events logged yet.")
     else:
+        st.success(f"Total events: {len(df)}")
         st.dataframe(df, use_container_width=True, hide_index=True)
-        st.write(f"Total events in database: {len(df)}")  # Debug line
 
 st.caption("WeAreWatchTower.com • Guard Response System")
