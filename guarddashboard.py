@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import sqlite3
 from zoneinfo import ZoneInfo
+import plotly.express as px
 
 st.set_page_config(page_title="Guard Response Portal", layout="wide")
 MTZ = ZoneInfo("America/Denver")
@@ -11,7 +12,7 @@ st.title("🛡️ GUARD RESPONSE PORTAL")
 st.caption("WeAreWatchTower.com")
 
 st.sidebar.title("WATCH TOWER")
-page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports"])
+page = st.sidebar.radio("Navigation", ["Log New Event", "Live Reports", "Performance Charts"])
 
 # ====================== DATABASE ======================
 DB_NAME = "watchtower_guard_log.db"
@@ -52,10 +53,6 @@ def get_data():
 
 init_db()
 
-# Force refresh data every time
-if 'df' not in st.session_state:
-    st.session_state.df = get_data()
-
 # ====================== LOG NEW EVENT ======================
 if page == "Log New Event":
     st.header("LOG NEW EVENT")
@@ -81,17 +78,53 @@ if page == "Log New Event":
             if log_event(full_event, remote_monitor, full_connection, location, event_type, notes):
                 st.success("**✅ EVENT CAPTURED SUCCESSFULLY!**")
                 st.balloons()
-                st.session_state.df = get_data()   # Force refresh
                 st.rerun()
 
 # ====================== LIVE REPORTS ======================
 elif page == "Live Reports":
     st.header("Recent Events")
-    df = st.session_state.df
+    df = get_data()
     if df.empty:
         st.info("No events logged yet.")
     else:
-        st.success(f"Total events: {len(df)}")
+        st.success(f"**Total Events Logged: {len(df)}**")
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+# ====================== PERFORMANCE CHARTS ======================
+elif page == "Performance Charts":
+    st.header("📊 Performance Overview")
+    df = get_data()
+    
+    if df.empty:
+        st.info("No events yet. Log some to see charts.")
+    else:
+        counts = df['event_type'].value_counts()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Events by Type")
+            fig_bar = px.bar(
+                x=counts.index, 
+                y=counts.values,
+                labels={'x': 'Event Type', 'y': 'Count'},
+                color=counts.index,
+                color_discrete_sequence=px.colors.qualitative.Bold
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+        
+        with col2:
+            st.subheader("Distribution")
+            fig_pie = px.pie(
+                names=counts.index, 
+                values=counts.values,
+                color=counts.index,
+                color_discrete_sequence=px.colors.qualitative.Bold
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        st.subheader("Event Summary")
+        for etype, count in counts.items():
+            st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
 
 st.caption("WeAreWatchTower.com • Guard Response System")
