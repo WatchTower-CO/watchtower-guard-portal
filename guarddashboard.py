@@ -102,25 +102,19 @@ elif page == "Performance Charts":
         
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Events by Type (Bar)")
-            fig_bar = px.bar(
-                x=counts.index, 
-                y=counts.values,
-                labels={'x': 'Event Type', 'y': 'Count'},
-                color_discrete_sequence=px.colors.qualitative.Bold
-            )
+            st.subheader("Events by Type")
+            fig_bar = px.bar(x=counts.index, y=counts.values, 
+                           labels={'x': 'Event Type', 'y': 'Count'},
+                           color_discrete_sequence=px.colors.qualitative.Bold)
             st.plotly_chart(fig_bar, use_container_width=True)
         
         with col2:
-            st.subheader("Distribution (Pie)")
-            fig_pie = px.pie(
-                names=counts.index, 
-                values=counts.values,
-                color_discrete_sequence=px.colors.qualitative.Bold
-            )
+            st.subheader("Distribution")
+            fig_pie = px.pie(names=counts.index, values=counts.values,
+                           color_discrete_sequence=px.colors.qualitative.Bold)
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        st.subheader("Event Summary")
+        st.subheader("Summary")
         for etype, count in counts.items():
             st.write(f"**{etype}** — {count} event{'s' if count > 1 else ''}")
 
