@@ -67,6 +67,17 @@ def log_event(event_time, remote_monitor, connection_time, location, event_type,
         st.error(f"Save error: {e}")
         return False
 
+def delete_event(event_id):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        conn.execute("DELETE FROM guard_events WHERE id = ?", (event_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Delete error: {e}")
+        return False
+
 def get_data():
     conn = sqlite3.connect(DB_NAME)
     df = pd.read_sql_query("SELECT * FROM guard_events ORDER BY id DESC", conn)
@@ -102,15 +113,28 @@ if page == "Log New Event":
                 st.balloons()
                 st.rerun()
 
-# ====================== LIVE REPORTS ======================
+# ====================== LIVE REPORTS (with Delete) ======================
 elif page == "Live Reports":
     st.header("Recent Events")
     df = get_data()
+    
     if df.empty:
         st.info("No events logged yet.")
     else:
         st.success(f"**Total Events Logged: {len(df)}**")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        # Add delete buttons
+        for index, row in df.iterrows():
+            col1, col2 = st.columns([6, 1])
+            with col1:
+                st.write(f"**{row['event_timestamp']}** | {row['event_type']} | {row['location']}")
+                st.caption(f"Remote: {row['remote_monitoring']} | Connection: {row['connection_established']} | Notes: {row['notes']}")
+            with col2:
+                if st.button("🗑️", key=f"delete_{row['id']}"):
+                    if delete_event(row['id']):
+                        st.success("Event deleted!")
+                        st.rerun()
+            st.divider()
 
 # ====================== PERFORMANCE CHARTS ======================
 elif page == "Performance Charts":
