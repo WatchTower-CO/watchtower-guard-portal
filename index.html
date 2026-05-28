@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Watch Tower — Alarm Event Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0d0f12;
+    --surface:  #161a20;
+    --surface2: #1e242d;
+    --border:   #2a3040;
+    --accent:   #C87B2F;
+    --accent-glow: rgba(200,123,47,0.25);
+    --accent2:  #ff4d4d;
+    --amber:    #ffb800;
+    --green:    #00e676;
+    --text:     #e2e8f0;
+    --muted:    #8896a8;
+    --font:     'Segoe UI', system-ui, sans-serif;
+    --radius:   8px;
+  }
+  html { font-size: 15px; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Layout ── */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 230px; min-width: 230px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; gap: 12px; position: sticky; top: 0; z-index: 10;
+  }
+  .content { flex: 1; padding: 24px; overflow-y: auto; }
+
+  /* ── Sidebar Logo ── */
+  .logo {
+    padding: 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo svg { width: 100%; height: auto; display: block; }
+
+  /* ── Nav ── */
+  .nav { padding: 12px 8px; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: var(--radius);
+    cursor: pointer; color: var(--muted); font-size: 0.88rem;
+    transition: background .15s, color .15s; user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(200,123,47,.15); color: var(--accent); font-weight: 600; }
+  .nav-icon { width: 18px; text-align: center; font-size: 1rem; }
+  .nav-label { flex: 1; }
+  .nav-badge {
+    background: var(--accent2); color: #fff;
+    font-size: 0.65rem; font-weight: 700;
+    padding: 1px 6px; border-radius: 10px; min-width: 20px; text-align: center;
+  }
+  .sidebar-footer {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 0.7rem; color: var(--muted); text-align: center; line-height: 1.6;
+  }
+  .sidebar-footer span { color: var(--accent); font-weight: 600; }
+
+  /* ── Topbar ── */
+  .page-title { font-size: 1.1rem; font-weight: 700; }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .status-label { font-size: 0.75rem; color: var(--muted); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 8px 16px; border-radius: var(--radius);
+    border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: opacity .15s, transform .1s; text-decoration: none; white-space: nowrap;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(255,77,77,.15); color: var(--accent2); border: 1px solid rgba(255,77,77,.3); }
+  .btn-danger:hover { background: rgba(255,77,77,.25); }
+  .btn-success { background: rgba(0,230,118,.15); color: var(--green); border: 1px solid rgba(0,230,118,.3); }
+  .btn-success:hover { background: rgba(0,230,118,.25); }
+  .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .card-title { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+
+  /* ── Stat Cards ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-card.orange::before { background: var(--accent); }
+  .stat-card.red::before    { background: var(--accent2); }
+  .stat-card.green::before  { background: var(--green); }
+  .stat-card.amber::before  { background: var(--amber); }
+  .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+  .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .stat-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .stat-card.orange .stat-value { color: var(--accent); }
+  .stat-card.red    .stat-value { color: var(--accent2); }
+  .stat-card.green  .stat-value { color: var(--green); }
+  .stat-card.amber  .stat-value { color: var(--amber); }
+
+  /* ── Filters ── */
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .filter-input, .filter-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 12px; border-radius: var(--radius);
+    font-size: 0.83rem; outline: none; transition: border .15s;
+  }
+  .filter-input:focus, .filter-select:focus { border-color: var(--accent); }
+  .filter-input { min-width: 140px; }
+  .filter-select { cursor: pointer; }
+  .filter-select option { background: var(--surface2); }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  th {
+    background: var(--surface2); color: var(--muted);
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: .07em;
+    padding: 10px 14px; text-align: left; white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+  tr:hover td { background: var(--surface2); }
+  .no-data { text-align: center; color: var(--muted); padding: 40px; }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .badge-open     { background: rgba(255,77,77,.15);  color: var(--accent2); }
+  .badge-resolved { background: rgba(0,230,118,.15);  color: var(--green); }
+  .badge-motion   { background: rgba(255,77,77,.15);   color: #ff6b6b; }
+  .badge-perimeter{ background: rgba(255,184,0,.15);   color: var(--amber); }
+  .badge-door     { background: rgba(200,123,47,.15);  color: var(--accent); }
+  .badge-power    { background: rgba(255,77,77,.2);    color: #ff4444; }
+  .badge-network  { background: rgba(128,0,255,.15);   color: #b388ff; }
+  .badge-test     { background: rgba(100,100,100,.2);  color: var(--muted); }
+  .badge-nosignal { background: rgba(255,120,0,.15);   color: #ff8c00; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; width: 100%; max-width: 540px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 25px 80px rgba(0,0,0,.6);
+  }
+  .modal-header { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 1.1rem; font-weight: 700; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 6px;
+    background: var(--surface2); border: none; color: var(--muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; transition: background .15s;
+  }
+  .modal-close:hover { background: var(--border); color: var(--text); }
+  .modal-body { padding: 20px 24px 24px; }
+
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+  .form-input, .form-select, .form-textarea {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 9px 12px; border-radius: var(--radius);
+    font-size: 0.85rem; outline: none; transition: border .15s;
+    font-family: var(--font); width: 100%;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 72px; }
+  .form-select option { background: var(--surface2); }
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── Pages ── */
+  .page { display: none; }
+  .page.active { display: block; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+  .section-title { font-size: 1rem; font-weight: 700; }
+
+  /* ── Dashboard charts ── */
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-bar-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .chart-bar-item { display: flex; flex-direction: column; gap: 4px; }
+  .chart-bar-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); }
+  .chart-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .chart-bar-fill  { height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s ease; }
+
+  /* ── Reports ── */
+  .rpt-header {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+  }
+  .rpt-header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .rpt-facility-name { font-size: 1.3rem; font-weight: 700; }
+  .rpt-filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  .rpt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .rpt-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .rpt-stat::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background: var(--accent); }
+  .rpt-stat-val { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .rpt-stat-val.green { color: var(--green); }
+  .rpt-stat-val.red   { color: var(--accent2); }
+  .rpt-stat-val.amber { color: var(--amber); }
+  .rpt-stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .chart-card-title { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+  .chart-canvas-wrap { position: relative; }
+
+  /* ── Connection time display ── */
+  .conn-time-display { text-align: center; padding: 20px 0 10px; }
+  .conn-time-big { font-size: 3rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .conn-time-unit { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+  .conn-time-sub  { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 12px 18px; border-radius: var(--radius);
+    font-size: 0.85rem; box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    z-index: 999; transform: translateY(80px); opacity: 0;
+    transition: all .25s; pointer-events: none; max-width: 300px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error   { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── Mobile ── */
+  .hamburger { display: none; background: none; border: none; cursor: pointer; color: var(--text); font-size: 1.3rem; padding: 4px; }
+  @media (max-width: 768px) {
+    .sidebar { position: fixed; left: -230px; top: 0; bottom: 0; z-index: 200; transition: left .25s; height: 100dvh; }
+    .sidebar.open { left: 0; }
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 199; }
+    .sidebar-backdrop.open { display: block; }
+    .hamburger { display: block; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .chart-row  { grid-template-columns: 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .form-grid  { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: unset; }
+    .content { padding: 16px; }
+    .topbar  { padding: 0 14px; }
+    .rpt-stats { grid-template-columns: 1fr 1fr; }
+  }
+
+  .action-cell { display: flex; gap: 6px; align-items: center; }
+  .row-detail   { background: var(--surface2) !important; }
+  .row-detail td { padding: 12px 14px; font-size: 0.82rem; color: var(--muted); white-space: normal; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .detail-item label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 3px; }
+  .detail-item span  { color: var(--text); }
+  .ham-icon { display: flex; flex-direction: column; gap: 4px; width: 20px; }
+  .ham-icon span { display: block; height: 2px; background: var(--text); border-radius: 1px; }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Print styles for reports */
+  @media print {
+    .sidebar, .topbar, .btn, .rpt-filter-row { display: none !important; }
+    .content { padding: 0; }
+    .card, .chart-card, .rpt-header { border: 1px solid #ccc; }
+    body { background: white; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<div class="app">
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar" id="sidebar">
+    <div class="logo">
+      <img src="/static/Main%20Logo-white.png" alt="Watch Tower" style="width:100%;height:auto;display:block;border-radius:4px;" />
+    </div>
+
+    <div class="nav">
+      <div class="nav-item active" onclick="goTo('dashboard', this)">
+        <span class="nav-icon">⬛</span><span class="nav-label">Dashboard</span>
+      </div>
+      <div class="nav-item" onclick="goTo('events', this)">
+        <span class="nav-icon">🔔</span><span class="nav-label">Alarm Events</span>
+        <span class="nav-badge" id="open-badge">0</span>
+      </div>
+      <div class="nav-item" onclick="goTo('facilities', this)">
+        <span class="nav-icon">🏢</span><span class="nav-label">Facilities</span>
+      </div>
+      <div class="nav-item" onclick="goTo('reports', this)">
+        <span class="nav-icon">📊</span><span class="nav-label">Reports</span>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <span>Watch Tower</span> v1.0<br>Remote Monitoring Platform
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="openSidebar()">
+          <div class="ham-icon"><span></span><span></span><span></span></div>
+        </button>
+        <span class="page-title" id="page-title">Dashboard</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="status-dot"></div>
+        <span class="status-label">LIVE</span>
+        <button class="btn btn-primary btn-sm" onclick="openNewEventModal()">+ Log Event</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ═══════════ DASHBOARD ═══════════ -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card orange">
+            <div class="stat-label">Total Events</div>
+            <div class="stat-value" id="stat-total">—</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Open</div>
+            <div class="stat-value" id="stat-open">—</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Resolved</div>
+            <div class="stat-value" id="stat-resolved">—</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Today</div>
+            <div class="stat-value" id="stat-today">—</div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="card">
+            <div class="card-title">Events by Type</div>
+            <div class="chart-bar-list" id="by-type-chart"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Recent Activity</div>
+            <div id="recent-events-list" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ EVENTS ═══════════ -->
+      <div class="page" id="page-events">
+        <div class="section-header">
+          <span class="section-title">Alarm Events</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="exportEvents()">⬇ Export CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="openNewEventModal()">+ Log Event</button>
+          </div>
+        </div>
+        <div class="filters">
+          <select class="filter-select" id="filter-facility" onchange="loadEvents()">
+            <option value="">All Facilities</option>
+          </select>
+          <select class="filter-select" id="filter-type" onchange="loadEvents()">
+            <option value="">All Types</option>
+            <option>Alarm Testing</option>
+            <option>Signal Lost / Networking Issue</option>
+            <option>Test Signal Not Received</option>
+            <option>Motion Alarm</option>
+            <option>Perimeter Alarm</option>
+            <option>Door Contact Alarm</option>
+            <option>Power Outage</option>
+          </select>
+          <select class="filter-select" id="filter-status" onchange="loadEvents()">
+            <option value="">All Statuses</option>
+            <option>Open</option>
+            <option>Resolved</option>
+          </select>
+          <input class="filter-input" type="date" id="filter-from" onchange="loadEvents()" />
+          <input class="filter-input" type="date" id="filter-to"   onchange="loadEvents()" />
+          <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Clear</button>
+        </div>
+        <div class="card" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Facility</th><th>Date</th><th>Time</th>
+                  <th>WT Connect</th><th>Type</th><th>Status</th><th>Operator</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="events-tbody">
+                <tr><td colspan="9" class="no-data">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ FACILITIES ═══════════ -->
+      <div class="page" id="page-facilities">
+        <div class="section-header">
+          <span class="section-title">Facilities</span>
+          <button class="btn btn-primary btn-sm" onclick="openFacilityModal()">+ Add Facility</button>
+        </div>
+        <div class="card" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Address</th><th>Contact</th><th>Phone</th><th>Notes</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="facilities-tbody">
+                <tr><td colspan="6" class="no-data">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ REPORTS ═══════════ -->
+      <div class="page" id="page-reports">
+
+        <!-- Report Header & Filters -->
+        <div class="rpt-header">
+          <div class="rpt-header-top">
+            <div>
+              <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Customer Report</div>
+              <div class="rpt-facility-name" id="rpt-facility-display">All Facilities</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print</button>
+              <button class="btn btn-primary btn-sm" onclick="downloadReport()">⬇ Export CSV</button>
+            </div>
+          </div>
+          <div class="rpt-filter-row">
+            <div>
+              <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Customer / Facility</label>
+              <select class="filter-select" id="rpt-facility" onchange="loadReportData()">
+                <option value="">All Facilities</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Date From</label>
+              <input class="filter-input" type="date" id="rpt-from" onchange="loadReportData()" />
+            </div>
+            <div>
+              <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Date To</label>
+              <input class="filter-input" type="date" id="rpt-to" onchange="loadReportData()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="rpt-stats" id="rpt-stats-row">
+          <div class="rpt-stat">
+            <div class="rpt-stat-val" id="rpt-total">—</div>
+            <div class="rpt-stat-label">Total Events</div>
+          </div>
+          <div class="rpt-stat">
+            <div class="rpt-stat-val red" id="rpt-open">—</div>
+            <div class="rpt-stat-label">Open</div>
+          </div>
+          <div class="rpt-stat">
+            <div class="rpt-stat-val green" id="rpt-resolved">—</div>
+            <div class="rpt-stat-label">Resolved</div>
+          </div>
+          <div class="rpt-stat" style="--accent:#C87B2F">
+            <div class="rpt-stat-val" id="rpt-top-type" style="font-size:1rem;padding-top:8px;">—</div>
+            <div class="rpt-stat-label">Most Frequent Type</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+
+          <!-- Pie Chart -->
+          <div class="chart-card">
+            <div class="chart-card-title">Alarm Type Distribution</div>
+            <div class="chart-canvas-wrap" style="max-height:280px;">
+              <canvas id="pie-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Horizontal Bar Chart -->
+          <div class="chart-card">
+            <div class="chart-card-title">Event Frequency by Type</div>
+            <div class="chart-canvas-wrap">
+              <canvas id="bar-chart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Avg Connection Time -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-card-title">⚡ Average Watch Tower Connection Time</div>
+            <div class="conn-time-display">
+              <div class="conn-time-big" id="conn-avg-val">—</div>
+              <div class="conn-time-unit" id="conn-avg-unit">minutes to connect</div>
+              <div class="conn-time-sub" id="conn-avg-sub">Calculated from events with connection timestamps</div>
+            </div>
+            <hr class="divider">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
+              <div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--green)" id="conn-min-val">—</div>
+                <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Fastest</div>
+              </div>
+              <div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--accent)" id="conn-avg-mid">—</div>
+                <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Average</div>
+              </div>
+              <div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--accent2)" id="conn-max-val">—</div>
+                <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Slowest</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Trend (simple bar) -->
+          <div class="chart-card">
+            <div class="chart-card-title">Monthly Event Trend</div>
+            <div class="chart-canvas-wrap">
+              <canvas id="trend-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-reports -->
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── Event Modal ── -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="event-modal-title">Log Alarm Event</span>
+      <button class="modal-close" onclick="closeModal('event-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="event-edit-id" />
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Facility</label>
+          <select class="form-select" id="ev-facility">
+            <option value="">— Select facility —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Event Type *</label>
+          <select class="form-select" id="ev-type" required>
+            <option value="">— Select type —</option>
+            <option>Alarm Testing</option>
+            <option>Signal Lost / Networking Issue</option>
+            <option>Test Signal Not Received</option>
+            <option>Motion Alarm</option>
+            <option>Perimeter Alarm</option>
+            <option>Door Contact Alarm</option>
+            <option>Power Outage</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Event Date *</label>
+          <input class="form-input" type="date" id="ev-date" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Event Time *</label>
+          <input class="form-input" type="time" id="ev-time" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">WT Connection Established</label>
+          <input class="form-input" type="time" id="ev-conn-time" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Operator</label>
+          <input class="form-input" type="text" id="ev-operator" placeholder="Your name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="ev-status">
+            <option value="Open">Open</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notes</label>
+          <textarea class="form-textarea" id="ev-notes" placeholder="Additional details…"></textarea>
+        </div>
+        <div class="form-group full" id="resolution-row" style="display:none;">
+          <label class="form-label">Resolution Notes</label>
+          <textarea class="form-textarea" id="ev-resolution" placeholder="How was this resolved?"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('event-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEvent()">Save Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Facility Modal ── -->
+<div class="modal-overlay" id="facility-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="facility-modal-title">Add Facility</span>
+      <button class="modal-close" onclick="closeModal('facility-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="facility-edit-id" />
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Facility / Customer Name *</label>
+          <input class="form-input" type="text" id="fac-name" required />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Address</label>
+          <input class="form-input" type="text" id="fac-address" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Name</label>
+          <input class="form-input" type="text" id="fac-contact" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Phone</label>
+          <input class="form-input" type="tel" id="fac-phone" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notes</label>
+          <textarea class="form-textarea" id="fac-notes"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('facility-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFacility()">Save Facility</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let facilities = [];
+let allEvents  = [];
+let statsData  = {};
+let expandedRow = null;
+let pieChartInst = null;
+let barChartInst = null;
+let trendChartInst = null;
+
+// ─── Chart colors for each alarm type ────────────────────────────────────────
+const TYPE_COLORS = {
+  'Motion Alarm':                   '#ff6b6b',
+  'Perimeter Alarm':                '#ffb800',
+  'Door Contact Alarm':             '#C87B2F',
+  'Power Outage':                   '#ff4444',
+  'Signal Lost / Networking Issue': '#b388ff',
+  'Alarm Testing':                  '#8896a8',
+  'Test Signal Not Received':       '#ff8c00',
+};
+const FALLBACK_COLORS = ['#C87B2F','#ffb800','#ff6b6b','#00e676','#b388ff','#00c8ff','#ff8c00'];
+
+function typeColor(type, idx) {
+  return TYPE_COLORS[type] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function goTo(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent = el.querySelector('.nav-label').textContent;
+  closeSidebar();
+  if (page === 'events')     loadEvents();
+  if (page === 'facilities') renderFacilities();
+  if (page === 'reports')    loadReportData();
+}
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open'); }
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ─── Badge helpers ────────────────────────────────────────────────────────────
+function typeBadge(type) {
+  const map = {
+    'Motion Alarm':'badge-motion','Perimeter Alarm':'badge-perimeter',
+    'Door Contact Alarm':'badge-door','Power Outage':'badge-power',
+    'Signal Lost / Networking Issue':'badge-network',
+    'Alarm Testing':'badge-test','Test Signal Not Received':'badge-nosignal',
+  };
+  return `<span class="badge ${map[type]||'badge-test'}">${type}</span>`;
+}
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Facilities ───────────────────────────────────────────────────────────────
+async function loadFacilities() {
+  facilities = await api('GET', '/api/facilities');
+  ['filter-facility','ev-facility','rpt-facility'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const cur = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    facilities.forEach(f => sel.add(new Option(f.name, f.id)));
+    sel.value = cur;
+  });
+}
+
+function renderFacilities() {
+  const tbody = document.getElementById('facilities-tbody');
+  if (!facilities.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">No facilities yet.</td></tr>'; return;
+  }
+  tbody.innerHTML = facilities.map(f => `
+    <tr>
+      <td><strong>${esc(f.name)}</strong></td>
+      <td>${esc(f.address||'—')}</td>
+      <td>${esc(f.contact_name||'—')}</td>
+      <td>${esc(f.contact_phone||'—')}</td>
+      <td style="max-width:200px;white-space:normal;font-size:.8rem;color:var(--muted)">${esc(f.notes||'—')}</td>
+      <td class="action-cell">
+        <button class="btn btn-ghost btn-sm" onclick='openFacilityModal(${JSON.stringify(f)})'>Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFacility(${f.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  statsData = await api('GET', '/api/events/stats');
+  document.getElementById('stat-total').textContent    = statsData.total;
+  document.getElementById('stat-open').textContent     = statsData.open;
+  document.getElementById('stat-resolved').textContent = statsData.resolved;
+  document.getElementById('stat-today').textContent    = statsData.today;
+  document.getElementById('open-badge').textContent    = statsData.open;
+  renderTypeChart('by-type-chart', statsData.by_type);
+}
+
+function renderTypeChart(containerId, data) {
+  const el = document.getElementById(containerId);
+  if (!data || !data.length) { el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;">No data yet.</p>'; return; }
+  const max = Math.max(...data.map(d => d.count));
+  el.innerHTML = data.map(d => `
+    <div class="chart-bar-item">
+      <div class="chart-bar-label"><span>${esc(d.event_type)}</span><span>${d.count}</span></div>
+      <div class="chart-bar-track">
+        <div class="chart-bar-fill" style="width:${Math.round(d.count/max*100)}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+async function loadEvents() {
+  const p = new URLSearchParams();
+  const fac    = document.getElementById('filter-facility')?.value;
+  const type   = document.getElementById('filter-type')?.value;
+  const status = document.getElementById('filter-status')?.value;
+  const from   = document.getElementById('filter-from')?.value;
+  const to     = document.getElementById('filter-to')?.value;
+  if (fac)    p.set('facility_id', fac);
+  if (type)   p.set('event_type', type);
+  if (status) p.set('status', status);
+  if (from)   p.set('date_from', from);
+  if (to)     p.set('date_to', to);
+  allEvents = await api('GET', '/api/events?' + p);
+  renderEvents();
+}
+
+function renderEvents() {
+  const tbody = document.getElementById('events-tbody');
+  if (!allEvents.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No events match your filters.</td></tr>'; return;
+  }
+  tbody.innerHTML = allEvents.map(e => `
+    <tr style="cursor:pointer;" onclick="toggleDetail(${e.id}, this)">
+      <td style="color:var(--muted);font-size:.75rem">#${e.id}</td>
+      <td><strong>${esc(e.facility_name||'—')}</strong></td>
+      <td>${esc(e.event_date)}</td>
+      <td>${esc(e.event_time)}</td>
+      <td style="color:var(--muted)">${esc(e.connection_established_time||'—')}</td>
+      <td>${typeBadge(e.event_type)}</td>
+      <td><span class="badge ${e.status==='Resolved'?'badge-resolved':'badge-open'}">${e.status}</span></td>
+      <td style="color:var(--muted)">${esc(e.operator||'—')}</td>
+      <td class="action-cell" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick='openEditEventModal(${JSON.stringify(e)})'>Edit</button>
+        ${e.status==='Open'?`<button class="btn btn-success btn-sm" onclick="resolveEvent(${e.id})">Resolve</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteEvent(${e.id})">Del</button>
+      </td>
+    </tr>`).join('');
+}
+
+function toggleDetail(id, row) {
+  const existing = document.getElementById('detail-'+(expandedRow||''));
+  if (existing) existing.remove();
+  if (expandedRow === id) { expandedRow = null; return; }
+  expandedRow = id;
+  const ev = allEvents.find(e => e.id === id); if (!ev) return;
+  const dr = document.createElement('tr');
+  dr.className = 'row-detail'; dr.id = 'detail-' + id;
+  dr.innerHTML = `<td colspan="9"><div class="detail-grid">
+    <div class="detail-item"><label>Event Date</label><span>${esc(ev.event_date)}</span></div>
+    <div class="detail-item"><label>Event Time</label><span>${esc(ev.event_time)}</span></div>
+    <div class="detail-item"><label>WT Connection Time</label><span>${esc(ev.connection_established_time||'—')}</span></div>
+    <div class="detail-item"><label>Operator</label><span>${esc(ev.operator||'—')}</span></div>
+    <div class="detail-item"><label>Facility</label><span>${esc(ev.facility_name||'—')}</span></div>
+    <div class="detail-item"><label>Logged At</label><span>${esc(ev.created_at||'—')}</span></div>
+    ${ev.notes?`<div class="detail-item" style="grid-column:1/-1"><label>Notes</label><span>${esc(ev.notes)}</span></div>`:''}
+    ${ev.resolution_notes?`<div class="detail-item" style="grid-column:1/-1"><label>Resolution</label><span>${esc(ev.resolution_notes)}</span></div>`:''}
+  </div></td>`;
+  row.insertAdjacentElement('afterend', dr);
+}
+
+function clearFilters() {
+  ['filter-facility','filter-type','filter-status','filter-from','filter-to'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  loadEvents();
+}
+
+async function loadRecentEvents() {
+  const recent = await api('GET', '/api/events?limit=5');
+  const el = document.getElementById('recent-events-list');
+  if (!recent.length) { el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;">No events yet.</p>'; return; }
+  el.innerHTML = recent.map(e => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(e.facility_name||'Unknown')}</div>
+        <div style="font-size:.75rem;color:var(--muted);">${esc(e.event_date)} ${esc(e.event_time)}</div>
+      </div>
+      <div>${typeBadge(e.event_type)}</div>
+      <span class="badge ${e.status==='Resolved'?'badge-resolved':'badge-open'}" style="font-size:.68rem">${e.status}</span>
+    </div>`).join('');
+}
+
+// ─── Event Modals ─────────────────────────────────────────────────────────────
+function openNewEventModal() {
+  document.getElementById('event-edit-id').value = '';
+  document.getElementById('event-modal-title').textContent = 'Log Alarm Event';
+  const today = new Date().toISOString().slice(0,10);
+  const now   = new Date().toTimeString().slice(0,5);
+  document.getElementById('ev-date').value     = today;
+  document.getElementById('ev-time').value     = now;
+  document.getElementById('ev-conn-time').value= now;
+  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution'].forEach(id => { document.getElementById(id).value=''; });
+  document.getElementById('ev-status').value = 'Open';
+  document.getElementById('resolution-row').style.display = 'none';
+  openModal('event-modal');
+}
+
+function openEditEventModal(ev) {
+  document.getElementById('event-edit-id').value = ev.id;
+  document.getElementById('event-modal-title').textContent = 'Edit Event #' + ev.id;
+  document.getElementById('ev-facility').value  = ev.facility_id||'';
+  document.getElementById('ev-type').value      = ev.event_type;
+  document.getElementById('ev-date').value      = ev.event_date;
+  document.getElementById('ev-time').value      = ev.event_time;
+  document.getElementById('ev-conn-time').value = ev.connection_established_time||'';
+  document.getElementById('ev-operator').value  = ev.operator||'';
+  document.getElementById('ev-status').value    = ev.status||'Open';
+  document.getElementById('ev-notes').value     = ev.notes||'';
+  document.getElementById('ev-resolution').value= ev.resolution_notes||'';
+  document.getElementById('resolution-row').style.display = ev.status==='Resolved' ? '' : 'none';
+  openModal('event-modal');
+}
+
+document.getElementById('ev-status').addEventListener('change', function() {
+  document.getElementById('resolution-row').style.display = this.value==='Resolved' ? '' : 'none';
+});
+
+async function saveEvent() {
+  const type = document.getElementById('ev-type').value;
+  const date = document.getElementById('ev-date').value;
+  const time = document.getElementById('ev-time').value;
+  if (!type||!date||!time) { toast('Event type, date, and time are required.','error'); return; }
+  const payload = {
+    facility_id: document.getElementById('ev-facility').value ? parseInt(document.getElementById('ev-facility').value) : null,
+    event_type: type, event_date: date, event_time: time,
+    connection_established_time: document.getElementById('ev-conn-time').value||null,
+    operator: document.getElementById('ev-operator').value||null,
+    status: document.getElementById('ev-status').value,
+    notes: document.getElementById('ev-notes').value||null,
+    resolution_notes: document.getElementById('ev-resolution').value||null,
+  };
+  try {
+    const id = document.getElementById('event-edit-id').value;
+    if (id) { await api('PUT','/api/events/'+id,payload); toast('Event updated.'); }
+    else    { await api('POST','/api/events',payload);   toast('Event logged.'); }
+    closeModal('event-modal');
+    await refreshAll();
+  } catch(e) { toast('Error saving event.','error'); }
+}
+
+async function resolveEvent(id) {
+  if (!confirm('Mark this event as Resolved?')) return;
+  await api('PUT','/api/events/'+id,{status:'Resolved'});
+  toast('Event resolved.'); await refreshAll();
+}
+
+async function deleteEvent(id) {
+  if (!confirm('Delete this event? This cannot be undone.')) return;
+  await api('DELETE','/api/events/'+id);
+  toast('Event deleted.'); await refreshAll();
+}
+
+// ─── Facility Modals ──────────────────────────────────────────────────────────
+function openFacilityModal(fac) {
+  const editing = fac && fac.id;
+  document.getElementById('facility-modal-title').textContent = editing ? 'Edit Facility' : 'Add Facility';
+  document.getElementById('facility-edit-id').value = editing ? fac.id : '';
+  document.getElementById('fac-name').value    = editing ? fac.name             : '';
+  document.getElementById('fac-address').value = editing ? (fac.address||'')    : '';
+  document.getElementById('fac-contact').value = editing ? (fac.contact_name||''): '';
+  document.getElementById('fac-phone').value   = editing ? (fac.contact_phone||''): '';
+  document.getElementById('fac-notes').value   = editing ? (fac.notes||'')      : '';
+  openModal('facility-modal');
+}
+
+async function saveFacility() {
+  const name = document.getElementById('fac-name').value.trim();
+  if (!name) { toast('Facility name is required.','error'); return; }
+  const payload = {
+    name,
+    address:       document.getElementById('fac-address').value||null,
+    contact_name:  document.getElementById('fac-contact').value||null,
+    contact_phone: document.getElementById('fac-phone').value||null,
+    notes:         document.getElementById('fac-notes').value||null,
+  };
+  try {
+    const id = document.getElementById('facility-edit-id').value;
+    if (id) { await api('PUT','/api/facilities/'+id,payload); toast('Facility updated.'); }
+    else    { await api('POST','/api/facilities',payload);   toast('Facility added.'); }
+    closeModal('facility-modal');
+    await loadFacilities(); renderFacilities();
+  } catch(e) { toast('Error saving facility.','error'); }
+}
+
+async function deleteFacility(id) {
+  if (!confirm('Delete this facility?')) return;
+  await api('DELETE','/api/facilities/'+id);
+  toast('Facility deleted.'); await loadFacilities(); renderFacilities();
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+function toMins(t) {
+  if (!t) return null;
+  const parts = t.split(':').map(Number);
+  return parts[0]*60 + parts[1];
+}
+
+function connTimeDiff(eventTime, connTime) {
+  const e = toMins(eventTime), c = toMins(connTime);
+  if (e===null||c===null) return null;
+  let diff = c - e;
+  if (diff < 0) diff += 1440; // midnight wrap
+  return diff; // in minutes
+}
+
+function formatMins(m) {
+  if (m === null || isNaN(m)) return '—';
+  const mins = Math.floor(m);
+  const secs = Math.round((m - mins) * 60);
+  if (mins === 0) return secs + 's';
+  if (secs === 0) return mins + 'm';
+  return mins + 'm ' + secs + 's';
+}
+
+async function loadReportData() {
+  const facId  = document.getElementById('rpt-facility').value;
+  const from   = document.getElementById('rpt-from').value;
+  const to     = document.getElementById('rpt-to').value;
+
+  // Update display name
+  const facName = facId
+    ? (facilities.find(f=>String(f.id)===String(facId))?.name || 'Unknown')
+    : 'All Facilities';
+  document.getElementById('rpt-facility-display').textContent = facName;
+
+  // Fetch events
+  const p = new URLSearchParams({ limit: 1000 });
+  if (facId) p.set('facility_id', facId);
+  if (from)  p.set('date_from', from);
+  if (to)    p.set('date_to', to);
+  const events = await api('GET', '/api/events?' + p);
+
+  // Stats
+  const open     = events.filter(e => e.status==='Open').length;
+  const resolved = events.filter(e => e.status==='Resolved').length;
+  document.getElementById('rpt-total').textContent    = events.length;
+  document.getElementById('rpt-open').textContent     = open;
+  document.getElementById('rpt-resolved').textContent = resolved;
+
+  // Count by type
+  const typeCounts = {};
+  events.forEach(e => { typeCounts[e.event_type] = (typeCounts[e.event_type]||0)+1; });
+  const typeSorted = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('rpt-top-type').textContent = typeSorted[0]?.[0] || '—';
+
+  // Connection time stats
+  const diffs = events
+    .map(e => connTimeDiff(e.event_time, e.connection_established_time))
+    .filter(d => d !== null && d >= 0 && d < 60); // filter out nulls and outliers over 1hr
+  if (diffs.length) {
+    const avg = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+    const mn  = Math.min(...diffs);
+    const mx  = Math.max(...diffs);
+    document.getElementById('conn-avg-val').textContent  = formatMins(avg);
+    document.getElementById('conn-avg-mid').textContent  = formatMins(avg);
+    document.getElementById('conn-min-val').textContent  = formatMins(mn);
+    document.getElementById('conn-max-val').textContent  = formatMins(mx);
+    document.getElementById('conn-avg-unit').textContent = 'average time to connect to camera feed';
+    document.getElementById('conn-avg-sub').textContent  = `Based on ${diffs.length} event${diffs.length!==1?'s':''} with connection timestamps`;
+  } else {
+    ['conn-avg-val','conn-avg-mid','conn-min-val','conn-max-val'].forEach(id => document.getElementById(id).textContent = '—');
+    document.getElementById('conn-avg-sub').textContent = 'No events with connection timestamps yet';
+  }
+
+  // Monthly trend
+  const monthCounts = {};
+  events.forEach(e => {
+    const ym = e.event_date?.slice(0,7);
+    if (ym) monthCounts[ym] = (monthCounts[ym]||0)+1;
+  });
+  const months    = Object.keys(monthCounts).sort().slice(-6);
+  const monthVals = months.map(m => monthCounts[m]);
+
+  // Render charts
+  renderPieChart(typeSorted);
+  renderBarChart(typeSorted);
+  renderTrendChart(months, monthVals);
+}
+
+function renderPieChart(typeSorted) {
+  if (pieChartInst) { pieChartInst.destroy(); pieChartInst = null; }
+  const ctx = document.getElementById('pie-chart').getContext('2d');
+  if (!typeSorted.length) return;
+  pieChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: typeSorted.map(t=>t[0]),
+      datasets: [{
+        data:  typeSorted.map(t=>t[1]),
+        backgroundColor: typeSorted.map((t,i)=>typeColor(t[0],i)),
+        borderColor: '#161a20',
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#8896a8', font: { size: 11 }, padding: 12, boxWidth: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/ctx.dataset.data.reduce((a,b)=>a+b,0)*100)}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderBarChart(typeSorted) {
+  if (barChartInst) { barChartInst.destroy(); barChartInst = null; }
+  const ctx = document.getElementById('bar-chart').getContext('2d');
+  if (!typeSorted.length) return;
+  const sorted = [...typeSorted].sort((a,b)=>a[1]-b[1]); // ascending for horizontal
+  barChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(t=>t[0]),
+      datasets: [{
+        label: 'Events',
+        data:  sorted.map(t=>t[1]),
+        backgroundColor: sorted.map((t,i)=>typeColor(t[0],i)+'cc'),
+        borderColor:     sorted.map((t,i)=>typeColor(t[0],i)),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} events` } }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8896a8', font:{size:11} },
+          grid:  { color: '#2a3040' },
+        },
+        y: {
+          ticks: { color: '#e2e8f0', font:{size:11} },
+          grid:  { display: false },
+        }
+      }
+    }
+  });
+}
+
+function renderTrendChart(months, vals) {
+  if (trendChartInst) { trendChartInst.destroy(); trendChartInst = null; }
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  if (!months.length) return;
+  const labels = months.map(m => {
+    const [y,mo] = m.split('-');
+    return new Date(y, mo-1).toLocaleString('default',{month:'short', year:'2-digit'});
+  });
+  trendChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Events',
+        data: vals,
+        backgroundColor: 'rgba(200,123,47,0.5)',
+        borderColor: '#C87B2F',
+        borderWidth: 2,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color:'#8896a8', font:{size:11} }, grid:{ color:'#2a3040' } },
+        y: { ticks: { color:'#8896a8', font:{size:11}, stepSize:1 }, grid:{ color:'#2a3040' } }
+      }
+    }
+  });
+}
+
+function downloadReport() {
+  const fac  = document.getElementById('rpt-facility').value;
+  const from = document.getElementById('rpt-from').value;
+  const to   = document.getElementById('rpt-to').value;
+  const p = new URLSearchParams();
+  if (fac)  p.set('facility_id', fac);
+  if (from) p.set('date_from', from);
+  if (to)   p.set('date_to', to);
+  window.location = '/api/events/export?' + p;
+}
+
+function exportEvents() {
+  const fac  = document.getElementById('filter-facility')?.value;
+  const from = document.getElementById('filter-from')?.value;
+  const to   = document.getElementById('filter-to')?.value;
+  const p = new URLSearchParams();
+  if (fac)  p.set('facility_id', fac);
+  if (from) p.set('date_from', from);
+  if (to)   p.set('date_to', to);
+  window.location = '/api/events/export?' + p;
+}
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); });
+});
+
+// ─── Refresh all ──────────────────────────────────────────────────────────────
+async function refreshAll() {
+  await Promise.all([loadFacilities(), loadStats(), loadRecentEvents()]);
+  if (document.getElementById('page-events').classList.contains('active'))     loadEvents();
+  if (document.getElementById('page-facilities').classList.contains('active')) renderFacilities();
+  if (document.getElementById('page-reports').classList.contains('active'))    loadReportData();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  await refreshAll();
+})();
+</script>
+</body>
+</html>
