@@ -147,6 +147,7 @@ def init_db():
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS reference_number TEXT",
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS zone TEXT",
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS area TEXT",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS contact_log TEXT",
     ] if USE_PG else [
         "ALTER TABLE events ADD COLUMN contacted_name TEXT",
         "ALTER TABLE events ADD COLUMN contact_phone TEXT",
@@ -156,6 +157,7 @@ def init_db():
         "ALTER TABLE events ADD COLUMN reference_number TEXT",
         "ALTER TABLE events ADD COLUMN zone TEXT",
         "ALTER TABLE events ADD COLUMN area TEXT",
+        "ALTER TABLE events ADD COLUMN contact_log TEXT",
     ]
     for col_sql in new_cols:
         try:
@@ -200,6 +202,7 @@ class EventCreate(BaseModel):
     reference_number: Optional[str] = None
     zone: Optional[str] = None
     area: Optional[str] = None
+    contact_log: Optional[str] = None
 
 class EventUpdate(BaseModel):
     facility_id: Optional[int] = None
@@ -219,6 +222,7 @@ class EventUpdate(BaseModel):
     reference_number: Optional[str] = None
     zone: Optional[str] = None
     area: Optional[str] = None
+    contact_log: Optional[str] = None
 
 # ─── Facility Routes ───────────────────────────────────────────────────────────
 @app.get("/api/facilities")
@@ -337,27 +341,27 @@ def create_event(event: EventCreate, user: str = Depends(authenticate)):
         cur.execute(q(
             "INSERT INTO events (facility_id, event_date, event_time, connection_established_time, "
             "event_type, operator, notes, status, resolution_notes, contacted_name, contact_phone, "
-            "contact_attempts, time_first_contact, police_dispatched, reference_number, zone, area) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
+            "contact_attempts, time_first_contact, police_dispatched, reference_number, zone, area, contact_log) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
         ), (event.facility_id, event.event_date, event.event_time,
             event.connection_established_time, event.event_type,
             event.operator, event.notes, event.status or "Open", event.resolution_notes,
             event.contacted_name, event.contact_phone, event.contact_attempts,
             event.time_first_contact, event.police_dispatched or "No",
-            event.reference_number, event.zone, event.area))
+            event.reference_number, event.zone, event.area, event.contact_log))
         new_id = cur.fetchone()[0]
     else:
         cur.execute(q(
             "INSERT INTO events (facility_id, event_date, event_time, connection_established_time, "
             "event_type, operator, notes, status, resolution_notes, contacted_name, contact_phone, "
-            "contact_attempts, time_first_contact, police_dispatched, reference_number, zone, area) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            "contact_attempts, time_first_contact, police_dispatched, reference_number, zone, area, contact_log) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         ), (event.facility_id, event.event_date, event.event_time,
             event.connection_established_time, event.event_type,
             event.operator, event.notes, event.status or "Open", event.resolution_notes,
             event.contacted_name, event.contact_phone, event.contact_attempts,
             event.time_first_contact, event.police_dispatched or "No",
-            event.reference_number, event.zone, event.area))
+            event.reference_number, event.zone, event.area, event.contact_log))
         new_id = cur.lastrowid
     conn.commit()
     cur.execute(q(
