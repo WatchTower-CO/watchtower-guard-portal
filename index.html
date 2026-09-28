@@ -902,7 +902,7 @@ function renderEvents() {
       <td><span class="badge ${e.status==='Resolved'?'badge-resolved':'badge-open'}">${e.status}</span></td>
       <td style="color:var(--muted)">${esc(e.operator||'—')}</td>
       <td class="action-cell" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-sm" onclick='openEditEventModal(${JSON.stringify(e)})'>Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditEventModalById(${e.id})">Edit</button>
         ${e.status==='Open'?`<button class="btn btn-success btn-sm" onclick="resolveEvent(${e.id})">Resolve</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="deleteEvent(${e.id})">Del</button>
       </td>
@@ -1008,6 +1008,11 @@ function openNewEventModal() {
   document.getElementById('ev-status').value = 'Open';
   document.getElementById('resolution-row').style.display = 'none';
   openModal('event-modal');
+}
+
+function openEditEventModalById(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (ev) openEditEventModal(ev);
 }
 
 function openEditEventModal(ev) {
