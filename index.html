@@ -838,7 +838,7 @@ function renderEvents() {
   }
   tbody.innerHTML = allEvents.map((e, i) => `
     <tr style="cursor:pointer;" onclick="toggleDetail(${e.id}, this)">
-      <td style="color:var(--muted);font-size:.75rem">#${i + 1}</td>
+      <td style="color:var(--muted);font-size:.75rem">#${allEvents.length - i}</td>
       <td><strong>${esc(e.facility_name||'—')}</strong></td>
       <td>${esc(e.event_date)}</td>
       <td>${esc(e.event_time)}</td>
