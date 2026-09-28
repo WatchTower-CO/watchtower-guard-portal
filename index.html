@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Watch Tower — Alarm Event Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -42,7 +43,7 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 24px; gap: 12px; position: sticky; top: 0; z-index: 10;
   }
-  .content { flex: 1; padding: 24px; overflow-y: auto; }
+  .content { flex: 1; padding: 16px 20px; overflow-y: auto; }
 
   /* ── Sidebar Logo ── */
   .logo {
@@ -233,29 +234,29 @@
   .rpt-facility-name { font-size: 1.3rem; font-weight: 700; }
   .rpt-filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
-  .rpt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .rpt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .rpt-stat {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px;
+    border-radius: var(--radius); padding: 12px;
     text-align: center; position: relative; overflow: hidden;
   }
   .rpt-stat::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background: var(--accent); }
-  .rpt-stat-val { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .rpt-stat-val { font-size: 1.5rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
   .rpt-stat-val.green { color: var(--green); }
   .rpt-stat-val.red   { color: var(--accent2); }
   .rpt-stat-val.amber { color: var(--amber); }
-  .rpt-stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
+  .rpt-stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 3px; }
 
-  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-  .chart-card-title { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
-  .chart-canvas-wrap { position: relative; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .chart-card-title { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .chart-canvas-wrap { position: relative; max-height: 180px; }
 
   /* ── Connection time display ── */
-  .conn-time-display { text-align: center; padding: 20px 0 10px; }
-  .conn-time-big { font-size: 3rem; font-weight: 700; color: var(--accent); line-height: 1; }
-  .conn-time-unit { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
-  .conn-time-sub  { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+  .conn-time-display { text-align: center; padding: 8px 0 6px; }
+  .conn-time-big { font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .conn-time-unit { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .conn-time-sub  { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
 
   /* ── Toast ── */
   #toast {
@@ -521,24 +522,17 @@
         </div>
 
         <!-- Charts Row -->
-        <div class="charts-grid">
-
-          <!-- Pie Chart -->
-          <div class="chart-card">
-            <div class="chart-card-title">Alarm Type Distribution</div>
-            <div class="chart-canvas-wrap" style="max-height:280px;">
+        <!-- Combined Type Distribution Card -->
+        <div class="chart-card" style="margin-bottom:12px;">
+          <div class="chart-card-title">Alarm Type Distribution</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;">
+            <div class="chart-canvas-wrap" style="max-height:180px;">
               <canvas id="pie-chart"></canvas>
             </div>
-          </div>
-
-          <!-- Horizontal Bar Chart -->
-          <div class="chart-card">
-            <div class="chart-card-title">Event Frequency by Type</div>
-            <div class="chart-canvas-wrap">
+            <div class="chart-canvas-wrap" style="max-height:180px;">
               <canvas id="bar-chart"></canvas>
             </div>
           </div>
-
         </div>
 
         <!-- Avg Connection Time -->
@@ -550,19 +544,19 @@
               <div class="conn-time-unit" id="conn-avg-unit">minutes to connect</div>
               <div class="conn-time-sub" id="conn-avg-sub">Calculated from events with connection timestamps</div>
             </div>
-            <hr class="divider">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
+            <hr class="divider" style="margin:8px 0;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
               <div>
-                <div style="font-size:1.2rem;font-weight:700;color:var(--green)" id="conn-min-val">—</div>
-                <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Fastest</div>
+                <div style="font-size:1rem;font-weight:700;color:var(--green)" id="conn-min-val">—</div>
+                <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;">Fastest</div>
               </div>
               <div>
-                <div style="font-size:1.2rem;font-weight:700;color:var(--accent)" id="conn-avg-mid">—</div>
-                <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Average</div>
+                <div style="font-size:1rem;font-weight:700;color:var(--accent)" id="conn-avg-mid">—</div>
+                <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;">Average</div>
               </div>
               <div>
-                <div style="font-size:1.2rem;font-weight:700;color:var(--accent2)" id="conn-max-val">—</div>
-                <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Slowest</div>
+                <div style="font-size:1rem;font-weight:700;color:var(--accent2)" id="conn-max-val">—</div>
+                <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;">Slowest</div>
               </div>
             </div>
           </div>
@@ -1241,15 +1235,21 @@ function renderPieChart(typeSorted) {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { color: '#8896a8', font: { size: 11 }, padding: 12, boxWidth: 12 }
+          labels: { color: '#8896a8', font: { size: 10 }, padding: 8, boxWidth: 10 }
         },
         tooltip: {
           callbacks: {
             label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/ctx.dataset.data.reduce((a,b)=>a+b,0)*100)}%)`
           }
+        },
+        datalabels: {
+          color: '#fff',
+          font: { weight: 'bold', size: 12 },
+          formatter: (value) => value,
         }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
@@ -1274,21 +1274,30 @@ function renderBarChart(typeSorted) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      layout: { padding: { right: 28 } },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} events` } }
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} events` } },
+        datalabels: {
+          anchor: 'end',
+          align: 'end',
+          color: '#e2e8f0',
+          font: { weight: 'bold', size: 11 },
+          formatter: (value) => value,
+        }
       },
       scales: {
         x: {
-          ticks: { color: '#8896a8', font:{size:11} },
+          ticks: { color: '#8896a8', font:{size:10} },
           grid:  { color: '#2a3040' },
         },
         y: {
-          ticks: { color: '#e2e8f0', font:{size:11} },
+          ticks: { color: '#e2e8f0', font:{size:10} },
           grid:  { display: false },
         }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
@@ -1315,12 +1324,13 @@ function renderTrendChart(months, vals) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: false }, datalabels: { display: false } },
       scales: {
         x: { ticks: { color:'#8896a8', font:{size:11} }, grid:{ color:'#2a3040' } },
         y: { ticks: { color:'#8896a8', font:{size:11}, stepSize:1 }, grid:{ color:'#2a3040' } }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
