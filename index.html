@@ -509,14 +509,15 @@
           <div class="rpt-stat" style="--accent:#C87B2F">
             <div class="rpt-stat-val" id="rpt-top-type" style="font-size:1rem;padding-top:8px;">—</div>
             <div class="rpt-stat-label">Most Frequent Type</div>
-                    <div class="rpt-stat">
+          </div>
+          <div class="rpt-stat">
             <div class="rpt-stat-val" id="rpt-avg-attempts">—</div>
             <div class="rpt-stat-label">Avg Contact Attempts</div>
           </div>
           <div class="rpt-stat">
             <div class="rpt-stat-val" id="rpt-police-count" style="color:var(--accent2)">—</div>
             <div class="rpt-stat-label">Police Dispatched</div>
-          </div></div>
+          </div>
         </div>
 
         <!-- Charts Row -->
@@ -575,15 +576,19 @@
           </div>
         </div>
 
-             <!-- Contact & Timeline -->
+        <!-- Response Timeline & Contact Summary -->
         <div class="charts-grid">
           <div class="chart-card">
             <div class="chart-card-title">📞 Contact Response Summary</div>
-            <div id="contact-summary-body"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No contact data yet</div></div>
+            <div id="contact-summary-body">
+              <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No contact data yet</div>
+            </div>
           </div>
           <div class="chart-card">
             <div class="chart-card-title">⏱ Response Timeline (avg minutes)</div>
-            <div id="timeline-body" style="padding:16px 0;"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No timeline data yet</div></div>
+            <div id="timeline-body" style="padding:16px 0;">
+              <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No timeline data yet</div>
+            </div>
           </div>
         </div>
 
@@ -652,7 +657,8 @@
           <label class="form-label">Resolution Notes</label>
           <textarea class="form-textarea" id="ev-resolution" placeholder="How was this resolved?"></textarea>
         </div>
-               <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+        <!-- Contact Info Section -->
+        <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
           <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Contact Information</div>
         </div>
         <div class="form-group">
@@ -883,7 +889,7 @@ function renderEvents() {
   }
   tbody.innerHTML = allEvents.map((e, i) => `
     <tr style="cursor:pointer;" onclick="toggleDetail(${e.id}, this)">
-      <td style="color:var(--muted);font-size:.75rem">#${allEvents.length - i}</td>
+      <td style="color:var(--muted);font-size:.75rem">#${i + 1}</td>
       <td><strong>${esc(e.facility_name||'—')}</strong></td>
       <td>${esc(e.event_date)}</td>
       <td>${esc(e.event_time)}</td>
@@ -892,7 +898,7 @@ function renderEvents() {
       <td><span class="badge ${e.status==='Resolved'?'badge-resolved':'badge-open'}">${e.status}</span></td>
       <td style="color:var(--muted)">${esc(e.operator||'—')}</td>
       <td class="action-cell" onclick="event.stopPropagation()">
-              <button class="btn btn-ghost btn-sm" onclick="openEditEventModalById(${e.id})">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick='openEditEventModal(${JSON.stringify(e)})'>Edit</button>
         ${e.status==='Open'?`<button class="btn btn-success btn-sm" onclick="resolveEvent(${e.id})">Resolve</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="deleteEvent(${e.id})">Del</button>
       </td>
@@ -916,6 +922,12 @@ function toggleDetail(id, row) {
     <div class="detail-item"><label>Logged At</label><span>${esc(ev.created_at||'—')}</span></div>
     ${ev.notes?`<div class="detail-item" style="grid-column:1/-1"><label>Notes</label><span>${esc(ev.notes)}</span></div>`:''}
     ${ev.resolution_notes?`<div class="detail-item" style="grid-column:1/-1"><label>Resolution</label><span>${esc(ev.resolution_notes)}</span></div>`:''}
+    ${(ev.contacted_name||ev.contact_phone||ev.contact_attempts!=null||ev.time_first_contact||ev.police_dispatched==='Yes')?`<div class="detail-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><label style="color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;">Contact Response</label><span></span></div>`:''}
+    ${ev.contacted_name?`<div class="detail-item"><label>Person Contacted</label><span>${esc(ev.contacted_name)}</span></div>`:''}
+    ${ev.contact_phone?`<div class="detail-item"><label>Contact Phone</label><span>${esc(ev.contact_phone)}</span></div>`:''}
+    ${ev.contact_attempts!=null?`<div class="detail-item"><label>Contact Attempts</label><span>${ev.contact_attempts}</span></div>`:''}
+    ${ev.time_first_contact?`<div class="detail-item"><label>Time First Contact</label><span>${esc(ev.time_first_contact)}</span></div>`:''}
+    ${ev.police_dispatched?`<div class="detail-item"><label>Police Dispatched</label><span style="color:${ev.police_dispatched==='Yes'?'var(--accent2)':'var(--muted)'}">${esc(ev.police_dispatched)}</span></div>`:''}
   </div></td>`;
   row.insertAdjacentElement('afterend', dr);
 }
@@ -951,20 +963,17 @@ function openNewEventModal() {
   document.getElementById('ev-date').value     = today;
   document.getElementById('ev-time').value     = now;
   document.getElementById('ev-conn-time').value= now;
-    ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-contacted-name','ev-contact-phone','ev-contact-attempts','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
+  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-contacted-name','ev-contact-phone','ev-contact-attempts','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
   document.getElementById('ev-police-dispatched').value = 'No';
   document.getElementById('ev-status').value = 'Open';
   document.getElementById('resolution-row').style.display = 'none';
   openModal('event-modal');
 }
-function openEditEventModalById(id) {
-  const ev = allEvents.find(e => e.id === id);
-  if (ev) openEditEventModal(ev);
-}
+
 function openEditEventModal(ev) {
   document.getElementById('event-edit-id').value = ev.id;
- const evIdx = allEvents.findIndex(x => x.id === ev.id);
-document.getElementById('event-modal-title').textContent = 'Edit Event #' + (evIdx + 1);
+  const evIdx = allEvents.findIndex(x => x.id === ev.id);
+  document.getElementById('event-modal-title').textContent = 'Edit Event #' + (evIdx + 1);
   document.getElementById('ev-facility').value  = ev.facility_id||'';
   document.getElementById('ev-type').value      = ev.event_type;
   document.getElementById('ev-date').value      = ev.event_date;
@@ -974,14 +983,15 @@ document.getElementById('event-modal-title').textContent = 'Edit Event #' + (evI
   document.getElementById('ev-status').value    = ev.status||'Open';
   document.getElementById('ev-notes').value     = ev.notes||'';
   document.getElementById('ev-resolution').value= ev.resolution_notes||'';
-    document.getElementById('resolution-row').style.display = ev.status==='Resolved' ? '' : 'none';
-  document.getElementById('ev-contacted-name').value    = ev.contacted_name||'';
-  document.getElementById('ev-contact-phone').value     = ev.contact_phone||'';
-  document.getElementById('ev-contact-attempts').value  = ev.contact_attempts||'';
-  document.getElementById('ev-time-first-contact').value= ev.time_first_contact||'';
+  document.getElementById('resolution-row').style.display = ev.status==='Resolved' ? '' : 'none';
+  document.getElementById('ev-contacted-name').value   = ev.contacted_name||'';
+  document.getElementById('ev-contact-phone').value    = ev.contact_phone||'';
+  document.getElementById('ev-contact-attempts').value = ev.contact_attempts||'';
+  document.getElementById('ev-time-first-contact').value = ev.time_first_contact||'';
   document.getElementById('ev-police-dispatched').value = ev.police_dispatched||'No';
   openModal('event-modal');
 }
+
 document.getElementById('ev-status').addEventListener('change', function() {
   document.getElementById('resolution-row').style.display = this.value==='Resolved' ? '' : 'none';
 });
@@ -998,10 +1008,10 @@ async function saveEvent() {
     operator: document.getElementById('ev-operator').value||null,
     status: document.getElementById('ev-status').value,
     notes: document.getElementById('ev-notes').value||null,
-        resolution_notes:   document.getElementById('ev-resolution').value||null,
-    contacted_name:     document.getElementById('ev-contacted-name').value||null,
-    contact_phone:      document.getElementById('ev-contact-phone').value||null,
-    contact_attempts:   document.getElementById('ev-contact-attempts').value ? parseInt(document.getElementById('ev-contact-attempts').value) : null,
+    resolution_notes: document.getElementById('ev-resolution').value||null,
+    contacted_name:   document.getElementById('ev-contacted-name').value||null,
+    contact_phone:    document.getElementById('ev-contact-phone').value||null,
+    contact_attempts: document.getElementById('ev-contact-attempts').value ? parseInt(document.getElementById('ev-contact-attempts').value) : null,
     time_first_contact: document.getElementById('ev-time-first-contact').value||null,
     police_dispatched:  document.getElementById('ev-police-dispatched').value||'No',
   };
@@ -1117,34 +1127,64 @@ async function loadReportData() {
   const typeCounts = {};
   events.forEach(e => { typeCounts[e.event_type] = (typeCounts[e.event_type]||0)+1; });
   const typeSorted = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
-    document.getElementById('rpt-top-type').textContent = typeSorted[0]?.[0] || '—';
+  document.getElementById('rpt-top-type').textContent = typeSorted[0]?.[0] || '—';
 
-  // Contact attempts
+  // Contact attempts stats
   const attemptsData = events.filter(e => e.contact_attempts != null && e.contact_attempts > 0);
-  const avgAttempts = attemptsData.length ? (attemptsData.reduce((s,e)=>s+Number(e.contact_attempts),0)/attemptsData.length).toFixed(1) : null;
+  const avgAttempts = attemptsData.length
+    ? (attemptsData.reduce((s,e) => s + Number(e.contact_attempts), 0) / attemptsData.length).toFixed(1)
+    : null;
   document.getElementById('rpt-avg-attempts').textContent = avgAttempts !== null ? avgAttempts : '—';
 
   // Police dispatched
-  document.getElementById('rpt-police-count').textContent = events.filter(e=>e.police_dispatched==='Yes').length;
+  const policeCount = events.filter(e => e.police_dispatched === 'Yes').length;
+  document.getElementById('rpt-police-count').textContent = policeCount;
 
-  // Contact summary
+  // Contact summary table
   const contactNames = {};
-  events.forEach(e => { if (e.contacted_name) contactNames[e.contacted_name]=(contactNames[e.contacted_name]||0)+1; });
+  events.forEach(e => {
+    if (e.contacted_name) contactNames[e.contacted_name] = (contactNames[e.contacted_name]||0)+1;
+  });
   const contactSorted = Object.entries(contactNames).sort((a,b)=>b[1]-a[1]);
   const contactBody = document.getElementById('contact-summary-body');
-  contactBody.innerHTML = contactSorted.length ? `<table style="width:100%;border-collapse:collapse;font-size:.82rem;"><thead><tr style="color:var(--muted);font-size:.7rem;text-transform:uppercase;"><th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);">Person Contacted</th><th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);">Times</th></tr></thead><tbody>${contactSorted.map(([name,count])=>`<tr><td style="padding:7px 0;border-bottom:1px solid var(--border);">${esc(name)}</td><td style="text-align:right;padding:7px 0;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700;">${count}</td></tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No contact data yet</div>';
+  if (contactSorted.length) {
+    contactBody.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+        <thead><tr style="color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;">
+          <th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);">Person Contacted</th>
+          <th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);">Times</th>
+        </tr></thead>
+        <tbody>${contactSorted.map(([name,count]) => `
+          <tr>
+            <td style="padding:7px 0;border-bottom:1px solid var(--border)20;">${esc(name)}</td>
+            <td style="text-align:right;padding:7px 0;border-bottom:1px solid var(--border)20;color:var(--accent);font-weight:700;">${count}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } else {
+    contactBody.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No contact data yet</div>';
+  }
 
-  // Response timeline
-  const contactDiffs = events.map(e=>connTimeDiff(e.event_time,e.time_first_contact)).filter(d=>d!=null&&d>=0&&d<120);
-  const wtDiffsRpt = events.map(e=>connTimeDiff(e.event_time,e.connection_established_time)).filter(d=>d!=null&&d>=0&&d<60);
-  const avgWtRpt = wtDiffsRpt.length ? wtDiffsRpt.reduce((a,b)=>a+b,0)/wtDiffsRpt.length : null;
+  // Response timeline (alarm → WT connect → first contact)
+  const timelineBody = document.getElementById('timeline-body');
+  const wtDiffs = events.map(e => connTimeDiff(e.event_time, e.connection_established_time)).filter(d=>d!=null&&d>=0&&d<60);
+  const contactDiffs = events.map(e => connTimeDiff(e.event_time, e.time_first_contact)).filter(d=>d!=null&&d>=0&&d<120);
+  const avgWt = wtDiffs.length ? wtDiffs.reduce((a,b)=>a+b,0)/wtDiffs.length : null;
   const avgContact = contactDiffs.length ? contactDiffs.reduce((a,b)=>a+b,0)/contactDiffs.length : null;
   const steps = [
-    {label:'Alarm Received',val:'0:00',color:'var(--muted)',note:'baseline'},
-    {label:'WT Connected',val:avgWtRpt!=null?formatMins(avgWtRpt):'—',color:'var(--accent)',note:avgWtRpt!=null?`avg of ${wtDiffsRpt.length} events`:'no data'},
-    {label:'Contact Made',val:avgContact!=null?formatMins(avgContact):'—',color:'var(--green)',note:avgContact!=null?`avg of ${contactDiffs.length} events`:'no data'},
+    { label: 'Alarm Received', val: '0:00', color: 'var(--muted)', note: 'baseline' },
+    { label: 'WT Connected', val: avgWt!=null ? formatMins(avgWt) : '—', color: 'var(--accent)', note: avgWt!=null?`avg of ${wtDiffs.length} events`:'no data' },
+    { label: 'Contact Made', val: avgContact!=null ? formatMins(avgContact) : '—', color: 'var(--green)', note: avgContact!=null?`avg of ${contactDiffs.length} events`:'no data' },
   ];
-  document.getElementById('timeline-body').innerHTML = steps.map((s,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i<2?'border-bottom:1px solid var(--border)':''}"><div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:.82rem;font-weight:600;">${s.label}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${s.note}</div></div><div style="font-size:1.1rem;font-weight:700;color:${s.color};">${s.val}</div></div>`).join('');
+  timelineBody.innerHTML = steps.map((s,i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i<steps.length-1?'border-bottom:1px solid var(--border)':''}">
+      <div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-size:.82rem;font-weight:600;">${s.label}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${s.note}</div>
+      </div>
+      <div style="font-size:1.1rem;font-weight:700;color:${s.color};">${s.val}</div>
+    </div>`).join('');
 
   // Connection time stats
   const diffs = events
