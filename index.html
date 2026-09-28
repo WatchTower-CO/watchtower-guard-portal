@@ -836,9 +836,9 @@ function renderEvents() {
   if (!allEvents.length) {
     tbody.innerHTML = '<tr><td colspan="9" class="no-data">No events match your filters.</td></tr>'; return;
   }
-  tbody.innerHTML = allEvents.map(e => `
+  tbody.innerHTML = allEvents.map((e, i) => `
     <tr style="cursor:pointer;" onclick="toggleDetail(${e.id}, this)">
-      <td style="color:var(--muted);font-size:.75rem">#${e.id}</td>
+      <td style="color:var(--muted);font-size:.75rem">#${i + 1}</td>
       <td><strong>${esc(e.facility_name||'—')}</strong></td>
       <td>${esc(e.event_date)}</td>
       <td>${esc(e.event_time)}</td>
@@ -914,7 +914,8 @@ function openNewEventModal() {
 
 function openEditEventModal(ev) {
   document.getElementById('event-edit-id').value = ev.id;
-  document.getElementById('event-modal-title').textContent = 'Edit Event #' + ev.id;
+ const evIdx = allEvents.findIndex(x => x.id === ev.id);
+document.getElementById('event-modal-title').textContent = 'Edit Event #' + (evIdx + 1);
   document.getElementById('ev-facility').value  = ev.facility_id||'';
   document.getElementById('ev-type').value      = ev.event_type;
   document.getElementById('ev-date').value      = ev.event_date;
