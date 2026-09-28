@@ -1,64 +1,87 @@
 #!/usr/bin/env python3
 """
 Watch Tower — Weekly Report Generator
-Runs automatically every Monday. Saves a CSV report to your Desktop.
+Runs automatically every Monday. Pulls live data from Render and saves
+a CSV report to your Desktop.
 """
 
-import sqlite3
 import csv
 import os
+import sys
+import urllib.request
+import urllib.parse
+import urllib.error
+import json
+import base64
 from datetime import datetime, timedelta
 
 # ─── Config ────────────────────────────────────────────────────────────────────
-# Path to your database (same folder as main.py)
-DB_PATH     = os.path.join(os.path.dirname(__file__), "watchtower.db")
+RENDER_URL   = "https://wt-portal.onrender.com"
+APP_USERNAME = "watchtower"
+APP_PASSWORD = "wt-secure-2024"
 
 # Where to save weekly reports (Desktop folder)
-REPORTS_DIR = os.path.expanduser("~/Desktop/Watch Tower Reports")
+REPORTS_DIR  = os.path.expanduser("~/Desktop/Watch Tower Reports")
 
 # ─── Setup ─────────────────────────────────────────────────────────────────────
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def api_get(path, params=None):
+    """Make an authenticated GET request to the Render app."""
+    url = RENDER_URL + path
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
+
+    credentials = base64.b64encode(
+        f"{APP_USERNAME}:{APP_PASSWORD}".encode()
+    ).decode()
+
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"Basic {credentials}")
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        print(f"[Watch Tower] API error {e.code}: {e.reason}")
+        print("  Check that the Render app is running and your credentials are correct.")
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print(f"[Watch Tower] Could not reach {RENDER_URL}")
+        print(f"  Reason: {e.reason}")
+        print("  Make sure you have an internet connection and Render is live.")
+        sys.exit(1)
 
 def generate_weekly_report():
-    today     = datetime.now()
-    week_ago  = today - timedelta(days=7)
-    date_from = week_ago.strftime("%Y-%m-%d")
-    date_to   = today.strftime("%Y-%m-%d")
-    week_label= f"{date_from}_to_{date_to}"
+    today      = datetime.now()
+    week_ago   = today - timedelta(days=7)
+    date_from  = week_ago.strftime("%Y-%m-%d")
+    date_to    = today.strftime("%Y-%m-%d")
+    week_label = f"{date_from}_to_{date_to}"
 
-    conn = get_db()
+    print(f"[Watch Tower] Fetching events from {RENDER_URL} ...")
 
-    # ── Pull events for the week ──────────────────────────────────────────────
-    events = conn.execute("""
-        SELECT e.id, f.name as facility, e.event_date, e.event_time,
-               e.connection_established_time, e.event_type, e.operator,
-               e.status, e.notes, e.resolution_notes, e.created_at
-        FROM events e
-        LEFT JOIN facilities f ON e.facility_id = f.id
-        WHERE e.event_date >= ? AND e.event_date <= ?
-        ORDER BY e.event_date DESC, e.event_time DESC
-    """, (date_from, date_to)).fetchall()
+    # ── Pull events from live Render API ──────────────────────────────────────
+    events = api_get("/api/events", {
+        "date_from": date_from,
+        "date_to":   date_to,
+    })
 
     # ── Compute summary stats ─────────────────────────────────────────────────
     total    = len(events)
-    open_ev  = sum(1 for e in events if e["status"] == "Open")
-    resolved = sum(1 for e in events if e["status"] == "Resolved")
+    open_ev  = sum(1 for e in events if e.get("status") == "Open")
+    resolved = sum(1 for e in events if e.get("status") == "Resolved")
 
     type_counts = {}
     for e in events:
-        t = e["event_type"]
+        t = e.get("event_type", "Unknown")
         type_counts[t] = type_counts.get(t, 0) + 1
 
     # ── Connection time average ───────────────────────────────────────────────
     diffs = []
     for e in events:
-        et = e["event_time"]
-        ct = e["connection_established_time"]
+        et = e.get("event_time")
+        ct = e.get("connection_established_time")
         if et and ct:
             try:
                 eh, em = map(int, et.split(":"))
@@ -70,8 +93,6 @@ def generate_weekly_report():
                 pass
     avg_conn = (sum(diffs) / len(diffs)) if diffs else None
 
-    conn.close()
-
     # ── Build filename ────────────────────────────────────────────────────────
     filename = f"WatchTower_Weekly_Report_{week_label}.csv"
     filepath = os.path.join(REPORTS_DIR, filename)
@@ -80,10 +101,10 @@ def generate_weekly_report():
     with open(filepath, "w", newline="") as f:
         writer = csv.writer(f)
 
-        # Summary section
         writer.writerow(["WATCH TOWER — WEEKLY REPORT"])
         writer.writerow([f"Period: {date_from} to {date_to}"])
         writer.writerow([f"Generated: {today.strftime('%B %d, %Y at %I:%M %p')}"])
+        writer.writerow([f"Source: {RENDER_URL}"])
         writer.writerow([])
 
         writer.writerow(["── SUMMARY ──"])
@@ -101,18 +122,24 @@ def generate_weekly_report():
             writer.writerow([t, c])
         writer.writerow([])
 
-        # Events detail
         writer.writerow(["── EVENT LOG ──"])
         writer.writerow(["ID", "Facility", "Date", "Time", "WT Connection Time",
                           "Type", "Operator", "Status", "Notes", "Resolution", "Logged At"])
 
         if events:
-            for e in events:
+            for row_num, e in enumerate(events, start=1):
                 writer.writerow([
-                    e["id"], e["facility"] or "—", e["event_date"], e["event_time"],
-                    e["connection_established_time"] or "—", e["event_type"],
-                    e["operator"] or "—", e["status"],
-                    e["notes"] or "", e["resolution_notes"] or "", e["created_at"]
+                    row_num,
+                    e.get("facility_name") or e.get("facility") or "—",
+                    e.get("event_date"),
+                    e.get("event_time"),
+                    e.get("connection_established_time") or "—",
+                    e.get("event_type"),
+                    e.get("operator") or "—",
+                    e.get("status"),
+                    e.get("notes") or "",
+                    e.get("resolution_notes") or "",
+                    e.get("created_at"),
                 ])
         else:
             writer.writerow(["No events recorded this week."])
