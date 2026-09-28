@@ -31,7 +31,8 @@ def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
 # ─── Database ──────────────────────────────────────────────────────────────────
 BASE_DIR     = os.path.dirname(__file__)
 DATABASE_URL = os.environ.get("DATABASE_URL")          # Set on Render → PostgreSQL
-STATIC_DIR   = BASE_DIR
+STATIC_DIR   = os.path.join(BASE_DIR, "static")
+
 USE_PG = bool(DATABASE_URL)
 
 if USE_PG:
@@ -143,12 +144,18 @@ def init_db():
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS contact_attempts INTEGER",
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS time_first_contact TEXT",
         "ALTER TABLE events ADD COLUMN IF NOT EXISTS police_dispatched TEXT DEFAULT 'No'",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS reference_number TEXT",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS zone TEXT",
+        "ALTER TABLE events ADD COLUMN IF NOT EXISTS area TEXT",
     ] if USE_PG else [
         "ALTER TABLE events ADD COLUMN contacted_name TEXT",
         "ALTER TABLE events ADD COLUMN contact_phone TEXT",
         "ALTER TABLE events ADD COLUMN contact_attempts INTEGER",
         "ALTER TABLE events ADD COLUMN time_first_contact TEXT",
         "ALTER TABLE events ADD COLUMN police_dispatched TEXT DEFAULT 'No'",
+        "ALTER TABLE events ADD COLUMN reference_number TEXT",
+        "ALTER TABLE events ADD COLUMN zone TEXT",
+        "ALTER TABLE events ADD COLUMN area TEXT",
     ]
     for col_sql in new_cols:
         try:
@@ -190,6 +197,9 @@ class EventCreate(BaseModel):
     contact_attempts: Optional[int] = None
     time_first_contact: Optional[str] = None
     police_dispatched: Optional[str] = "No"
+    reference_number: Optional[str] = None
+    zone: Optional[str] = None
+    area: Optional[str] = None
 
 class EventUpdate(BaseModel):
     facility_id: Optional[int] = None
@@ -206,6 +216,9 @@ class EventUpdate(BaseModel):
     contact_attempts: Optional[int] = None
     time_first_contact: Optional[str] = None
     police_dispatched: Optional[str] = None
+    reference_number: Optional[str] = None
+    zone: Optional[str] = None
+    area: Optional[str] = None
 
 # ─── Facility Routes ───────────────────────────────────────────────────────────
 @app.get("/api/facilities")
@@ -324,24 +337,27 @@ def create_event(event: EventCreate, user: str = Depends(authenticate)):
         cur.execute(q(
             "INSERT INTO events (facility_id, event_date, event_time, connection_established_time, "
             "event_type, operator, notes, status, resolution_notes, contacted_name, contact_phone, "
-            "contact_attempts, time_first_contact, police_dispatched) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
+            "contact_attempts, time_first_contact, police_dispatched, reference_number, zone, area) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
         ), (event.facility_id, event.event_date, event.event_time,
             event.connection_established_time, event.event_type,
             event.operator, event.notes, event.status or "Open", event.resolution_notes,
             event.contacted_name, event.contact_phone, event.contact_attempts,
-            event.time_first_contact, event.police_dispatched or "No"))
+            event.time_first_contact, event.police_dispatched or "No",
+            event.reference_number, event.zone, event.area))
         new_id = cur.fetchone()[0]
     else:
         cur.execute(q(
             "INSERT INTO events (facility_id, event_date, event_time, connection_established_time, "
             "event_type, operator, notes, status, resolution_notes, contacted_name, contact_phone, "
-            "contact_attempts, time_first_contact, police_dispatched) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            "contact_attempts, time_first_contact, police_dispatched, reference_number, zone, area) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         ), (event.facility_id, event.event_date, event.event_time,
             event.connection_established_time, event.event_type,
             event.operator, event.notes, event.status or "Open", event.resolution_notes,
             event.contacted_name, event.contact_phone, event.contact_attempts,
-            event.time_first_contact, event.police_dispatched or "No"))
+            event.time_first_contact, event.police_dispatched or "No",
+            event.reference_number, event.zone, event.area))
         new_id = cur.lastrowid
     conn.commit()
     cur.execute(q(
