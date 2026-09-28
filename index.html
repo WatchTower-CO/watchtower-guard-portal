@@ -602,8 +602,8 @@
       <input type="hidden" id="event-edit-id" />
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label">Facility</label>
-          <select class="form-select" id="ev-facility">
+          <label class="form-label">Facility *</label>
+          <select class="form-select" id="ev-facility" required>
             <option value="">— Select facility —</option>
           </select>
         </div>
@@ -629,12 +629,12 @@
           <input class="form-input" type="time" id="ev-time" required />
         </div>
         <div class="form-group">
-          <label class="form-label">WT Connection Established</label>
-          <input class="form-input" type="time" id="ev-conn-time" />
+          <label class="form-label">WT Connection Established *</label>
+          <input class="form-input" type="time" id="ev-conn-time" required />
         </div>
         <div class="form-group">
-          <label class="form-label">Operator</label>
-          <input class="form-input" type="text" id="ev-operator" placeholder="Your name" />
+          <label class="form-label">Operator *</label>
+          <input class="form-input" type="text" id="ev-operator" placeholder="Your name" required />
         </div>
         <div class="form-group">
           <label class="form-label">Status</label>
@@ -651,25 +651,41 @@
           <label class="form-label">Resolution Notes</label>
           <textarea class="form-textarea" id="ev-resolution" placeholder="How was this resolved?"></textarea>
         </div>
+        <!-- Monitoring Station Section -->
+        <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Monitoring Station</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reference # *</label>
+          <input class="form-input" type="text" id="ev-reference" placeholder="e.g. 273759501" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zone *</label>
+          <input class="form-input" type="text" id="ev-zone" placeholder="Zone" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Area *</label>
+          <input class="form-input" type="text" id="ev-area" placeholder="Area" required />
+        </div>
         <!-- Contact Info Section -->
         <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
           <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Contact Information</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Person Contacted</label>
-          <input class="form-input" type="text" id="ev-contacted-name" placeholder="Name / Title" />
+          <label class="form-label">Person Contacted *</label>
+          <input class="form-input" type="text" id="ev-contacted-name" placeholder="Name / Title" required />
         </div>
         <div class="form-group">
           <label class="form-label">Contact Phone</label>
           <input class="form-input" type="text" id="ev-contact-phone" placeholder="Phone number" />
         </div>
         <div class="form-group">
-          <label class="form-label">Contact Attempts</label>
-          <input class="form-input" type="number" id="ev-contact-attempts" min="0" placeholder="0" />
+          <label class="form-label">Contact Attempts *</label>
+          <input class="form-input" type="number" id="ev-contact-attempts" min="0" placeholder="0" required />
         </div>
         <div class="form-group">
-          <label class="form-label">Time of First Contact</label>
-          <input class="form-input" type="time" id="ev-time-first-contact" />
+          <label class="form-label">Time of First Contact *</label>
+          <input class="form-input" type="time" id="ev-time-first-contact" required />
         </div>
         <div class="form-group">
           <label class="form-label">Police / Emergency Dispatched</label>
@@ -916,6 +932,10 @@ function toggleDetail(id, row) {
     <div class="detail-item"><label>Logged At</label><span>${esc(ev.created_at||'—')}</span></div>
     ${ev.notes?`<div class="detail-item" style="grid-column:1/-1"><label>Notes</label><span>${esc(ev.notes)}</span></div>`:''}
     ${ev.resolution_notes?`<div class="detail-item" style="grid-column:1/-1"><label>Resolution</label><span>${esc(ev.resolution_notes)}</span></div>`:''}
+    ${(ev.reference_number||ev.zone||ev.area)?`<div class="detail-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><label style="color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;">Monitoring Station</label><span></span></div>`:''}
+    ${ev.reference_number?`<div class="detail-item"><label>Reference #</label><span>${esc(ev.reference_number)}</span></div>`:''}
+    ${ev.zone?`<div class="detail-item"><label>Zone</label><span>${esc(ev.zone)}</span></div>`:''}
+    ${ev.area?`<div class="detail-item"><label>Area</label><span>${esc(ev.area)}</span></div>`:''}
     ${(ev.contacted_name||ev.contact_phone||ev.contact_attempts!=null||ev.time_first_contact||ev.police_dispatched==='Yes')?`<div class="detail-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><label style="color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;">Contact Response</label><span></span></div>`:''}
     ${ev.contacted_name?`<div class="detail-item"><label>Person Contacted</label><span>${esc(ev.contacted_name)}</span></div>`:''}
     ${ev.contact_phone?`<div class="detail-item"><label>Contact Phone</label><span>${esc(ev.contact_phone)}</span></div>`:''}
@@ -957,7 +977,7 @@ function openNewEventModal() {
   document.getElementById('ev-date').value     = today;
   document.getElementById('ev-time').value     = now;
   document.getElementById('ev-conn-time').value= now;
-  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-contacted-name','ev-contact-phone','ev-contact-attempts','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
+  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-reference','ev-zone','ev-area','ev-contacted-name','ev-contact-phone','ev-contact-attempts','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
   document.getElementById('ev-police-dispatched').value = 'No';
   document.getElementById('ev-status').value = 'Open';
   document.getElementById('resolution-row').style.display = 'none';
@@ -978,6 +998,9 @@ function openEditEventModal(ev) {
   document.getElementById('ev-notes').value     = ev.notes||'';
   document.getElementById('ev-resolution').value= ev.resolution_notes||'';
   document.getElementById('resolution-row').style.display = ev.status==='Resolved' ? '' : 'none';
+  document.getElementById('ev-reference').value        = ev.reference_number||'';
+  document.getElementById('ev-zone').value             = ev.zone||'';
+  document.getElementById('ev-area').value             = ev.area||'';
   document.getElementById('ev-contacted-name').value   = ev.contacted_name||'';
   document.getElementById('ev-contact-phone').value    = ev.contact_phone||'';
   document.getElementById('ev-contact-attempts').value = ev.contact_attempts||'';
@@ -1003,6 +1026,9 @@ async function saveEvent() {
     status: document.getElementById('ev-status').value,
     notes: document.getElementById('ev-notes').value||null,
     resolution_notes: document.getElementById('ev-resolution').value||null,
+    reference_number: document.getElementById('ev-reference').value||null,
+    zone:             document.getElementById('ev-zone').value||null,
+    area:             document.getElementById('ev-area').value||null,
     contacted_name:   document.getElementById('ev-contacted-name').value||null,
     contact_phone:    document.getElementById('ev-contact-phone').value||null,
     contact_attempts: document.getElementById('ev-contact-attempts').value ? parseInt(document.getElementById('ev-contact-attempts').value) : null,
