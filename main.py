@@ -31,7 +31,7 @@ def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
 # ─── Database ──────────────────────────────────────────────────────────────────
 BASE_DIR     = os.path.dirname(__file__)
 DATABASE_URL = os.environ.get("DATABASE_URL")          # Set on Render → PostgreSQL
-STATIC_DIR   = os.path.join(BASE_DIR, "static")
+STATIC_DIR   = BASE_DIR
 
 USE_PG = bool(DATABASE_URL)
 
