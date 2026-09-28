@@ -932,7 +932,8 @@ function openNewEventModal() {
   document.getElementById('ev-date').value     = today;
   document.getElementById('ev-time').value     = now;
   document.getElementById('ev-conn-time').value= now;
-  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution'].forEach(id => { document.getElementById(id).value=''; });
+    ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-contacted-name','ev-contact-phone','ev-contact-attempts','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
+  document.getElementById('ev-police-dispatched').value = 'No';
   document.getElementById('ev-status').value = 'Open';
   document.getElementById('resolution-row').style.display = 'none';
   openModal('event-modal');
