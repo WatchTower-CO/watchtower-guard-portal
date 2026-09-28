@@ -960,8 +960,6 @@ document.getElementById('event-modal-title').textContent = 'Edit Event #' + (evI
   document.getElementById('ev-police-dispatched').value = ev.police_dispatched||'No';
   openModal('event-modal');
 }
-}
-
 document.getElementById('ev-status').addEventListener('change', function() {
   document.getElementById('resolution-row').style.display = this.value==='Resolved' ? '' : 'none';
 });
