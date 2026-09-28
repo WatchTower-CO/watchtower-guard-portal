@@ -978,7 +978,12 @@ async function saveEvent() {
     operator: document.getElementById('ev-operator').value||null,
     status: document.getElementById('ev-status').value,
     notes: document.getElementById('ev-notes').value||null,
-    resolution_notes: document.getElementById('ev-resolution').value||null,
+        resolution_notes:   document.getElementById('ev-resolution').value||null,
+    contacted_name:     document.getElementById('ev-contacted-name').value||null,
+    contact_phone:      document.getElementById('ev-contact-phone').value||null,
+    contact_attempts:   document.getElementById('ev-contact-attempts').value ? parseInt(document.getElementById('ev-contact-attempts').value) : null,
+    time_first_contact: document.getElementById('ev-time-first-contact').value||null,
+    police_dispatched:  document.getElementById('ev-police-dispatched').value||'No',
   };
   try {
     const id = document.getElementById('event-edit-id').value;
