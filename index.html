@@ -938,7 +938,10 @@ function openNewEventModal() {
   document.getElementById('resolution-row').style.display = 'none';
   openModal('event-modal');
 }
-
+function openEditEventModalById(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (ev) openEditEventModal(ev);
+}
 function openEditEventModal(ev) {
   document.getElementById('event-edit-id').value = ev.id;
  const evIdx = allEvents.findIndex(x => x.id === ev.id);
