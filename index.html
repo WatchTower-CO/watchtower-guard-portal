@@ -669,19 +669,13 @@
         </div>
         <!-- Contact Info Section -->
         <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
-          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Contact Information</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Person Contacted *</label>
-          <input class="form-input" type="text" id="ev-contacted-name" placeholder="Name / Title" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Contact Phone</label>
-          <input class="form-input" type="text" id="ev-contact-phone" placeholder="Phone number" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Contact Attempts *</label>
-          <input class="form-input" type="number" id="ev-contact-attempts" min="0" placeholder="0" required />
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Contact Attempts *</div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="addContactAttempt()" style="font-size:.75rem;padding:4px 10px;">+ Add Attempt</button>
+          </div>
+          <div id="contact-attempts-list" style="display:flex;flex-direction:column;gap:8px;">
+            <!-- rows injected by JS -->
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Time of First Contact *</label>
@@ -936,10 +930,8 @@ function toggleDetail(id, row) {
     ${ev.reference_number?`<div class="detail-item"><label>Reference #</label><span>${esc(ev.reference_number)}</span></div>`:''}
     ${ev.zone?`<div class="detail-item"><label>Zone</label><span>${esc(ev.zone)}</span></div>`:''}
     ${ev.area?`<div class="detail-item"><label>Area</label><span>${esc(ev.area)}</span></div>`:''}
-    ${(ev.contacted_name||ev.contact_phone||ev.contact_attempts!=null||ev.time_first_contact||ev.police_dispatched==='Yes')?`<div class="detail-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><label style="color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;">Contact Response</label><span></span></div>`:''}
-    ${ev.contacted_name?`<div class="detail-item"><label>Person Contacted</label><span>${esc(ev.contacted_name)}</span></div>`:''}
-    ${ev.contact_phone?`<div class="detail-item"><label>Contact Phone</label><span>${esc(ev.contact_phone)}</span></div>`:''}
-    ${ev.contact_attempts!=null?`<div class="detail-item"><label>Contact Attempts</label><span>${ev.contact_attempts}</span></div>`:''}
+    ${(ev.contact_log||ev.contacted_name||ev.time_first_contact||ev.police_dispatched==='Yes')?`<div class="detail-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><label style="color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;">Contact Response</label><span></span></div>`:''}
+    ${(()=>{ let log=[]; try{log=JSON.parse(ev.contact_log||'[]');}catch(e){} if(!log.length&&ev.contacted_name) log=[{name:ev.contacted_name,outcome:'Successful'}]; return log.map((a,i)=>`<div class="detail-item" style="grid-column:1/-1;display:flex;gap:12px;align-items:center;padding:3px 0;"><span style="font-size:.68rem;color:var(--muted);min-width:68px;">Attempt ${i+1}</span><span>${esc(a.name)}</span><span style="font-size:.72rem;font-weight:600;color:${a.outcome==='Successful'?'var(--green)':'var(--accent2)'};margin-left:auto;">${a.outcome}</span></div>`).join(''); })()}
     ${ev.time_first_contact?`<div class="detail-item"><label>Time First Contact</label><span>${esc(ev.time_first_contact)}</span></div>`:''}
     ${ev.police_dispatched?`<div class="detail-item"><label>Police Dispatched</label><span style="color:${ev.police_dispatched==='Yes'?'var(--accent2)':'var(--muted)'}">${esc(ev.police_dispatched)}</span></div>`:''}
   </div></td>`;
@@ -969,6 +961,39 @@ async function loadRecentEvents() {
 }
 
 // ─── Event Modals ─────────────────────────────────────────────────────────────
+// ── Contact Attempt Builder ───────────────────────────────────────────────────
+function addContactAttempt(name='', outcome='Unsuccessful') {
+  const list = document.getElementById('contact-attempts-list');
+  const idx  = list.children.length + 1;
+  const row  = document.createElement('div');
+  row.className = 'contact-attempt-row';
+  row.style.cssText = 'display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;';
+  row.innerHTML = `
+    <span style="font-size:.72rem;color:var(--muted);white-space:nowrap;">Attempt ${idx}</span>
+    <input class="form-input" type="text" placeholder="Name" value="${name.replace(/"/g,'&quot;')}" style="font-size:.82rem;padding:6px 10px;" />
+    <select class="form-select" style="font-size:.82rem;padding:6px 8px;width:auto;">
+      <option value="Unsuccessful"${outcome==='Unsuccessful'?' selected':''}>Unsuccessful</option>
+      <option value="Successful"${outcome==='Successful'?' selected':''}>Successful</option>
+    </select>
+    <button type="button" onclick="this.closest('.contact-attempt-row').remove();renumberAttempts();" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px;">✕</button>`;
+  list.appendChild(row);
+}
+function setContactAttempts(arr) {
+  document.getElementById('contact-attempts-list').innerHTML = '';
+  arr.forEach(a => addContactAttempt(a.name||'', a.outcome||'Unsuccessful'));
+}
+function getContactAttempts() {
+  return [...document.querySelectorAll('.contact-attempt-row')].map(row => ({
+    name:    row.querySelector('input').value.trim(),
+    outcome: row.querySelector('select').value,
+  })).filter(a => a.name);
+}
+function renumberAttempts() {
+  document.querySelectorAll('.contact-attempt-row').forEach((row, i) => {
+    row.querySelector('span').textContent = `Attempt ${i+1}`;
+  });
+}
+
 function openNewEventModal() {
   document.getElementById('event-edit-id').value = '';
   document.getElementById('event-modal-title').textContent = 'Log Alarm Event';
@@ -977,8 +1002,9 @@ function openNewEventModal() {
   document.getElementById('ev-date').value     = today;
   document.getElementById('ev-time').value     = now;
   document.getElementById('ev-conn-time').value= now;
-  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-reference','ev-zone','ev-area','ev-contacted-name','ev-contact-phone','ev-contact-attempts','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
+  ['ev-facility','ev-type','ev-operator','ev-notes','ev-resolution','ev-reference','ev-zone','ev-area','ev-time-first-contact'].forEach(id => { document.getElementById(id).value=''; });
   document.getElementById('ev-police-dispatched').value = 'No';
+  setContactAttempts([{name:'',outcome:'Unsuccessful'}]);
   document.getElementById('ev-status').value = 'Open';
   document.getElementById('resolution-row').style.display = 'none';
   openModal('event-modal');
@@ -1001,11 +1027,18 @@ function openEditEventModal(ev) {
   document.getElementById('ev-reference').value        = ev.reference_number||'';
   document.getElementById('ev-zone').value             = ev.zone||'';
   document.getElementById('ev-area').value             = ev.area||'';
-  document.getElementById('ev-contacted-name').value   = ev.contacted_name||'';
-  document.getElementById('ev-contact-phone').value    = ev.contact_phone||'';
-  document.getElementById('ev-contact-attempts').value = ev.contact_attempts||'';
   document.getElementById('ev-time-first-contact').value = ev.time_first_contact||'';
   document.getElementById('ev-police-dispatched').value = ev.police_dispatched||'No';
+  // Load contact attempts — prefer contact_log JSON, fall back to legacy field
+  let attempts = [];
+  if (ev.contact_log) {
+    try { attempts = JSON.parse(ev.contact_log); } catch(e) {}
+  }
+  if (!attempts.length && ev.contacted_name) {
+    attempts = [{name: ev.contacted_name, outcome: 'Successful'}];
+  }
+  if (!attempts.length) attempts = [{name:'', outcome:'Unsuccessful'}];
+  setContactAttempts(attempts);
   openModal('event-modal');
 }
 
@@ -1029,11 +1062,11 @@ async function saveEvent() {
     reference_number: document.getElementById('ev-reference').value||null,
     zone:             document.getElementById('ev-zone').value||null,
     area:             document.getElementById('ev-area').value||null,
-    contacted_name:   document.getElementById('ev-contacted-name').value||null,
-    contact_phone:    document.getElementById('ev-contact-phone').value||null,
-    contact_attempts: document.getElementById('ev-contact-attempts').value ? parseInt(document.getElementById('ev-contact-attempts').value) : null,
     time_first_contact: document.getElementById('ev-time-first-contact').value||null,
     police_dispatched:  document.getElementById('ev-police-dispatched').value||'No',
+    contact_log: (()=>{ const rows = getContactAttempts(); return rows.length ? JSON.stringify(rows) : null; })(),
+    contact_attempts: getContactAttempts().length||null,
+    contacted_name: (()=>{ const rows = getContactAttempts(); const s = rows.find(r=>r.outcome==='Successful'); return s ? s.name : (rows[rows.length-1]?.name||null); })(),
   };
   try {
     const id = document.getElementById('event-edit-id').value;
@@ -1160,24 +1193,34 @@ async function loadReportData() {
   const policeCount = events.filter(e => e.police_dispatched === 'Yes').length;
   document.getElementById('rpt-police-count').textContent = policeCount;
 
-  // Contact summary table
-  const contactNames = {};
+  // Contact summary table — built from contact_log per attempt
+  const contactStats = {}; // name → {total, successful}
   events.forEach(e => {
-    if (e.contacted_name) contactNames[e.contacted_name] = (contactNames[e.contacted_name]||0)+1;
+    let log = [];
+    try { log = JSON.parse(e.contact_log||'[]'); } catch(err) {}
+    if (!log.length && e.contacted_name) log = [{name: e.contacted_name, outcome: 'Successful'}];
+    log.forEach(a => {
+      if (!a.name) return;
+      if (!contactStats[a.name]) contactStats[a.name] = {total:0, successful:0};
+      contactStats[a.name].total++;
+      if (a.outcome === 'Successful') contactStats[a.name].successful++;
+    });
   });
-  const contactSorted = Object.entries(contactNames).sort((a,b)=>b[1]-a[1]);
+  const contactSorted = Object.entries(contactStats).sort((a,b)=>b[1].total-a[1].total);
   const contactBody = document.getElementById('contact-summary-body');
   if (contactSorted.length) {
     contactBody.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
         <thead><tr style="color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;">
-          <th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);">Person Contacted</th>
-          <th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);">Times</th>
+          <th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);">Person</th>
+          <th style="text-align:center;padding:6px 0;border-bottom:1px solid var(--border);">Attempts</th>
+          <th style="text-align:center;padding:6px 0;border-bottom:1px solid var(--border);">Reached</th>
         </tr></thead>
-        <tbody>${contactSorted.map(([name,count]) => `
+        <tbody>${contactSorted.map(([name,s]) => `
           <tr>
             <td style="padding:7px 0;border-bottom:1px solid var(--border)20;">${esc(name)}</td>
-            <td style="text-align:right;padding:7px 0;border-bottom:1px solid var(--border)20;color:var(--accent);font-weight:700;">${count}</td>
+            <td style="text-align:center;padding:7px 0;border-bottom:1px solid var(--border)20;color:var(--accent);font-weight:700;">${s.total}</td>
+            <td style="text-align:center;padding:7px 0;border-bottom:1px solid var(--border)20;color:${s.successful?'var(--green)':'var(--accent2)'};font-weight:700;">${s.successful ? '✓' : '✗'}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
