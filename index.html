@@ -1117,7 +1117,34 @@ async function loadReportData() {
   const typeCounts = {};
   events.forEach(e => { typeCounts[e.event_type] = (typeCounts[e.event_type]||0)+1; });
   const typeSorted = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
-  document.getElementById('rpt-top-type').textContent = typeSorted[0]?.[0] || '—';
+    document.getElementById('rpt-top-type').textContent = typeSorted[0]?.[0] || '—';
+
+  // Contact attempts
+  const attemptsData = events.filter(e => e.contact_attempts != null && e.contact_attempts > 0);
+  const avgAttempts = attemptsData.length ? (attemptsData.reduce((s,e)=>s+Number(e.contact_attempts),0)/attemptsData.length).toFixed(1) : null;
+  document.getElementById('rpt-avg-attempts').textContent = avgAttempts !== null ? avgAttempts : '—';
+
+  // Police dispatched
+  document.getElementById('rpt-police-count').textContent = events.filter(e=>e.police_dispatched==='Yes').length;
+
+  // Contact summary
+  const contactNames = {};
+  events.forEach(e => { if (e.contacted_name) contactNames[e.contacted_name]=(contactNames[e.contacted_name]||0)+1; });
+  const contactSorted = Object.entries(contactNames).sort((a,b)=>b[1]-a[1]);
+  const contactBody = document.getElementById('contact-summary-body');
+  contactBody.innerHTML = contactSorted.length ? `<table style="width:100%;border-collapse:collapse;font-size:.82rem;"><thead><tr style="color:var(--muted);font-size:.7rem;text-transform:uppercase;"><th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);">Person Contacted</th><th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);">Times</th></tr></thead><tbody>${contactSorted.map(([name,count])=>`<tr><td style="padding:7px 0;border-bottom:1px solid var(--border);">${esc(name)}</td><td style="text-align:right;padding:7px 0;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700;">${count}</td></tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;">No contact data yet</div>';
+
+  // Response timeline
+  const contactDiffs = events.map(e=>connTimeDiff(e.event_time,e.time_first_contact)).filter(d=>d!=null&&d>=0&&d<120);
+  const wtDiffsRpt = events.map(e=>connTimeDiff(e.event_time,e.connection_established_time)).filter(d=>d!=null&&d>=0&&d<60);
+  const avgWtRpt = wtDiffsRpt.length ? wtDiffsRpt.reduce((a,b)=>a+b,0)/wtDiffsRpt.length : null;
+  const avgContact = contactDiffs.length ? contactDiffs.reduce((a,b)=>a+b,0)/contactDiffs.length : null;
+  const steps = [
+    {label:'Alarm Received',val:'0:00',color:'var(--muted)',note:'baseline'},
+    {label:'WT Connected',val:avgWtRpt!=null?formatMins(avgWtRpt):'—',color:'var(--accent)',note:avgWtRpt!=null?`avg of ${wtDiffsRpt.length} events`:'no data'},
+    {label:'Contact Made',val:avgContact!=null?formatMins(avgContact):'—',color:'var(--green)',note:avgContact!=null?`avg of ${contactDiffs.length} events`:'no data'},
+  ];
+  document.getElementById('timeline-body').innerHTML = steps.map((s,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i<2?'border-bottom:1px solid var(--border)':''}"><div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:.82rem;font-weight:600;">${s.label}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${s.note}</div></div><div style="font-size:1.1rem;font-weight:700;color:${s.color};">${s.val}</div></div>`).join('');
 
   // Connection time stats
   const diffs = events
