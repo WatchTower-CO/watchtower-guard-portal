@@ -952,8 +952,14 @@ document.getElementById('event-modal-title').textContent = 'Edit Event #' + (evI
   document.getElementById('ev-status').value    = ev.status||'Open';
   document.getElementById('ev-notes').value     = ev.notes||'';
   document.getElementById('ev-resolution').value= ev.resolution_notes||'';
-  document.getElementById('resolution-row').style.display = ev.status==='Resolved' ? '' : 'none';
+    document.getElementById('resolution-row').style.display = ev.status==='Resolved' ? '' : 'none';
+  document.getElementById('ev-contacted-name').value    = ev.contacted_name||'';
+  document.getElementById('ev-contact-phone').value     = ev.contact_phone||'';
+  document.getElementById('ev-contact-attempts').value  = ev.contact_attempts||'';
+  document.getElementById('ev-time-first-contact').value= ev.time_first_contact||'';
+  document.getElementById('ev-police-dispatched').value = ev.police_dispatched||'No';
   openModal('event-modal');
+}
 }
 
 document.getElementById('ev-status').addEventListener('change', function() {
