@@ -633,6 +633,32 @@
           <label class="form-label">Resolution Notes</label>
           <textarea class="form-textarea" id="ev-resolution" placeholder="How was this resolved?"></textarea>
         </div>
+               <div class="form-group full" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Contact Information</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Person Contacted</label>
+          <input class="form-input" type="text" id="ev-contacted-name" placeholder="Name / Title" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Phone</label>
+          <input class="form-input" type="text" id="ev-contact-phone" placeholder="Phone number" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Attempts</label>
+          <input class="form-input" type="number" id="ev-contact-attempts" min="0" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time of First Contact</label>
+          <input class="form-input" type="time" id="ev-time-first-contact" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Police / Emergency Dispatched</label>
+          <select class="form-select" id="ev-police-dispatched">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-ghost" onclick="closeModal('event-modal')">Cancel</button>
